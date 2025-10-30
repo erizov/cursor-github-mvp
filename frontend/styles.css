@@ -1,0 +1,28 @@
+:root { --bg: #0f172a; --card: #111827; --text: #e5e7eb; --muted: #9ca3af; --accent: #22c55e; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: Inter, system-ui, Arial, sans-serif; }
+.container { max-width: 900px; margin: 40px auto; padding: 0 16px; }
+.card { background: linear-gradient(180deg, #0b1020, #0b1020), var(--card); border-radius: 14px; border: 1px solid #1f2937; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
+h1 { margin: 0 0 16px; font-size: 24px; }
+.section-title { margin-top: 24px; margin-bottom: 8px; font-size: 16px; color: var(--muted); }
+.muted { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; margin-top: 16px; }
+.bar { background: #1f2937; border-radius: 10px; overflow: hidden; border: 1px solid #2a3646; }
+.bar > div { height: 28px; display: flex; align-items: center; padding-left: 8px; font-size: 13px; color: #0b1020; font-weight: 600; }
+.pill { display: inline-block; padding: 4px 10px; border-radius: 999px; background: #1f2937; border: 1px solid #2a3646; color: var(--muted); font-size: 12px; }
+.row { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.legend { display: flex; gap: 8px; flex-wrap: wrap; }
+.legend span { border-radius: 6px; padding: 6px 8px; font-size: 12px; border: 1px solid #2a3646; }
+.accent { color: #34d399; }
+.btn { background: #111827; border: 1px solid #2a3646; color: var(--text); padding: 10px 14px; border-radius: 10px; cursor: pointer; }
+.btn:hover { border-color: #3b4c63; }
+.footer { margin-top: 18px; color: var(--muted); font-size: 12px; }
+
+/* Table styles */
+.table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+.table th, .table td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #1f2937; }
+.table th { color: var(--muted); font-weight: 600; font-size: 12px; letter-spacing: 0.02em; }
+.table tr:hover td { background: #0e1428; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; background: #0d1326; border: 1px solid #2a3646; color: var(--text); border-radius: 999px; font-size: 12px; }
+.chip-key { color: var(--muted); }
+
+
