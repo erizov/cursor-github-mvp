@@ -220,7 +220,7 @@ Access:
 
 **With external MongoDB:**
 ```bash
-docker run -p 8000:8000 \
+docker run --name algorithm-teacher -p 8000:8000 \
   -e MONGODB_URI=mongodb://host.docker.internal:27017 \
   -e MONGODB_DB=algorithm_teacher \
   algorithm-teacher
