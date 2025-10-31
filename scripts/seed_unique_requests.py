@@ -25,28 +25,44 @@ def get_algorithm_type_from_prompt(prompt: str) -> str:
     alg_lower = top_algorithm.lower()
     
     # Map algorithm to type
-    if any(x in alg_lower for x in ["logistic", "svm", "random forest (classification)", "naive bayes", "knn"]):
+    if any(x in alg_lower for x in ["logistic", "svm", "random forest (classification)", "naive bayes", "knn"]) and "regression" not in alg_lower:
         return "Classification"
-    elif "bert" in alg_lower or "roberta" in alg_lower or "text" in alg_lower:
-        return "NLP"
-    elif any(x in alg_lower for x in ["linear regression", "random forest (regression)", "gradient boosting"]):
+    elif any(x in alg_lower for x in ["linear regression", "random forest (regression)"]):
         return "Regression"
     elif any(x in alg_lower for x in ["k-means", "dbscan"]):
         return "Clustering"
     elif any(x in alg_lower for x in ["pca", "t-sne", "umap"]):
         return "Dimensionality Reduction"
-    elif any(x in alg_lower for x in ["arima", "prophet", "lstm", "temporal"]):
+    elif any(x in alg_lower for x in ["arima", "prophet"]):
         return "Time Series"
-    elif any(x in alg_lower for x in ["cnn", "vision", "object detection", "yolo"]):
+    elif any(x in alg_lower for x in ["lstm", "temporal cnn"]):
+        return "Sequence Models"
+    elif any(x in alg_lower for x in ["bert", "roberta", "text"]):
+        return "NLP"
+    elif any(x in alg_lower for x in ["object detection", "yolo", "faster r-cnn"]):
+        return "Computer Vision Detection"
+    elif any(x in alg_lower for x in ["cnn", "vision"]) and "detection" not in alg_lower:
         return "Vision"
     elif any(x in alg_lower for x in ["anomaly", "isolation forest", "one-class"]):
         return "Anomaly Detection"
-    elif any(x in alg_lower for x in ["recsys", "recommend", "matrix factorization"]):
+    elif any(x in alg_lower for x in ["recsys", "recommend", "matrix factorization", "two-tower"]):
         return "Recommender Systems"
     elif any(x in alg_lower for x in ["reinforcement", "dqn", "ppo"]):
         return "Reinforcement Learning"
     elif any(x in alg_lower for x in ["causal", "dowhy", "ate"]):
         return "Causal Inference"
+    elif "gradient boosting" in alg_lower or "xgboost" in alg_lower or "lightgbm" in alg_lower or "catboost" in alg_lower:
+        return "Ensemble Methods"
+    elif any(x in alg_lower for x in ["optimization", "genetic", "simulated annealing"]):
+        return "Optimization"
+    elif any(x in alg_lower for x in ["graph", "gnn", "graph neural"]):
+        return "Graph Algorithms"
+    elif any(x in alg_lower for x in ["transfer", "fine-tun", "pretrain"]):
+        return "Transfer Learning"
+    elif any(x in alg_lower for x in ["gan", "vae", "generative", "diffusion"]):
+        return "Generative Models"
+    elif any(x in alg_lower for x in ["generation", "summariz", "text generation"]):
+        return "Natural Language Generation"
     else:
         return "Other"
 

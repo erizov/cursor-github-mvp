@@ -4,6 +4,7 @@ from backend.logging_config import configure_logging, get_logger
 from backend.routers.recommendations import router as recommendations_router
 from backend.routers.reports import router as reports_router
 from backend.routers.index import router as index_router
+from backend.routers.performance import router as performance_router
 
 
 def create_app() -> FastAPI:
@@ -30,6 +31,7 @@ def create_app() -> FastAPI:
     app.include_router(index_router)
     app.include_router(recommendations_router, prefix="/api")
     app.include_router(reports_router, prefix="/api")
+    app.include_router(performance_router, prefix="/api")
     Instrumentator().instrument(app).expose(app)
     return app
 

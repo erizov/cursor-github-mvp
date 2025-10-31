@@ -47,8 +47,10 @@
         const [seeding, setSeeding] = React.useState(false);
         const categories = [
           'Classification', 'Regression', 'Clustering', 'Dimensionality Reduction',
-          'Time Series', 'NLP', 'Vision', 'Anomaly Detection', 'Recommender Systems',
-          'Reinforcement Learning', 'Causal Inference', 'Other'
+          'Time Series', 'Sequence Models', 'NLP', 'Vision', 'Computer Vision Detection',
+          'Anomaly Detection', 'Recommender Systems', 'Reinforcement Learning',
+          'Causal Inference', 'Ensemble Methods', 'Optimization', 'Graph Algorithms',
+          'Transfer Learning', 'Generative Models', 'Natural Language Generation', 'Other'
         ];
 
         const load = async () => {
@@ -159,17 +161,25 @@
 
         const getCategoryForAlgorithm = (name) => {
           const n = name.toLowerCase();
-          if (n.includes('logistic') || n.includes('svm') || n.includes('random forest (classification)') || n.includes('naive bayes') || n.includes('knn')) return 'Classification';
-          if (n.includes('linear regression') || n.includes('random forest (regression)') || (n.includes('gradient boosting') && !n.includes('classification'))) return 'Regression';
+          if ((n.includes('logistic') || n.includes('svm') || n.includes('random forest (classification)') || n.includes('naive bayes') || n.includes('knn')) && !n.includes('regression')) return 'Classification';
+          if ((n.includes('linear regression') || n.includes('random forest (regression)')) && !n.includes('gradient boosting')) return 'Regression';
           if (n.includes('k-means') || n.includes('dbscan')) return 'Clustering';
           if (n.includes('pca') || n.includes('t-sne') || n.includes('umap')) return 'Dimensionality Reduction';
-          if (n.includes('arima') || n.includes('prophet') || n.includes('lstm') || n.includes('temporal')) return 'Time Series';
-          if (n.includes('bert') || n.includes('roberta') || n.includes('text')) return 'NLP';
-          if (n.includes('cnn') || n.includes('vision') || n.includes('object detection') || n.includes('yolo') || n.includes('faster r-cnn')) return 'Vision';
+          if ((n.includes('arima') || n.includes('prophet')) && !n.includes('lstm')) return 'Time Series';
+          if (n.includes('lstm') || n.includes('temporal cnn')) return 'Sequence Models';
+          if (n.includes('bert') || n.includes('roberta') || (n.includes('text') && !n.includes('generation'))) return 'NLP';
+          if (n.includes('object detection') || n.includes('yolo') || n.includes('faster r-cnn')) return 'Computer Vision Detection';
+          if (n.includes('cnn') || n.includes('vision')) return 'Vision';
           if (n.includes('anomaly') || n.includes('isolation forest') || n.includes('one-class')) return 'Anomaly Detection';
-          if (n.includes('recsys') || n.includes('recommend')) return 'Recommender Systems';
+          if (n.includes('recsys') || n.includes('recommend') || n.includes('matrix factorization') || n.includes('two-tower')) return 'Recommender Systems';
           if (n.includes('reinforcement') || n.includes('dqn') || n.includes('ppo')) return 'Reinforcement Learning';
           if (n.includes('causal') || n.includes('dowhy') || n.includes('ate')) return 'Causal Inference';
+          if (n.includes('gradient boosting') || n.includes('xgboost') || n.includes('lightgbm') || n.includes('catboost')) return 'Ensemble Methods';
+          if (n.includes('optimization') || n.includes('genetic') || n.includes('simulated annealing')) return 'Optimization';
+          if (n.includes('graph') || n.includes('gnn') || n.includes('graph neural')) return 'Graph Algorithms';
+          if (n.includes('transfer') || n.includes('fine-tun') || n.includes('pretrain')) return 'Transfer Learning';
+          if (n.includes('gan') || n.includes('vae') || n.includes('generative') || n.includes('diffusion')) return 'Generative Models';
+          if (n.includes('generation') || n.includes('summariz') || n.includes('text generation')) return 'Natural Language Generation';
           return 'Other';
         };
 

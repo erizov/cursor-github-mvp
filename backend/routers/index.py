@@ -382,6 +382,31 @@ async def api_index(request: Request) -> HTMLResponse:
             ]
         },
         {
+            "title": "Performance",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/api/performance/report",
+                    "description": "Performance report with graphs comparing all backends (HTML)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/performance",
+                    "description": "Performance endpoints index (JSON)"
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/performance/test-all",
+                    "description": "Run performance tests for all backends (inmemory, mongodb, sqlite)"
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/performance/test",
+                    "description": "Test performance of a specific backend"
+                }
+            ]
+        },
+        {
             "title": "Cleanup",
             "endpoints": [
                 {
