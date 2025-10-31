@@ -21,6 +21,23 @@ curl -X POST http://localhost:8000/api/recommend \
 
 Open usage chart (HTML): http://localhost:8000/api/reports/usage.html
 
+## Environment configuration
+
+Create a `.env` (or export env vars) to control runtime:
+
+```
+# Default: in-memory repositories (no external DB needed)
+USE_IN_MEMORY=1
+
+# To enable MongoDB instead, set:
+# USE_IN_MEMORY=0
+# MONGODB_URI=mongodb://localhost:27017
+# MONGODB_DB=ai_algo_teacher
+
+# Optional logging level (default INFO)
+# LOG_LEVEL=INFO
+```
+
 ## Minimal Stack
 - Python 3.11, FastAPI, Uvicorn
 - In-memory repository by default
