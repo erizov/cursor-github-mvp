@@ -197,9 +197,11 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <a href="/docs">📚 Docs</a>
             <a href="/api/reports/usage">📊 JSON</a>
             <a href="/api/reports/details.html">📑 Details</a>
+            <button onclick="seedDemoData()" id="seedBtn" style="margin-left: auto; padding: 8px 16px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; font-family: 'Inter', sans-serif;">🌱 Seed Demo Data</button>
           </div>
           <h1>Usage Report</h1>
           <div class="sub">Algorithm usage statistics and visualizations</div>
+          <div id="seedStatus" style="display: none; padding: 12px; margin-bottom: 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); border: 1px solid rgba(122, 162, 247, 0.3);"></div>
           <div class="stats-grid">
             <div class="statbox">
               <div class="label">Total Selections</div>
@@ -329,6 +331,75 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
           }});
         </script>
         ''' if total else ''}
+        <script>
+          async function seedDemoData() {{
+            const btn = document.getElementById('seedBtn');
+            const statusDiv = document.getElementById('seedStatus');
+            const originalText = btn.textContent;
+            
+            btn.disabled = true;
+            btn.textContent = '🌱 Seeding...';
+            statusDiv.style.display = 'block';
+            statusDiv.innerHTML = '<em style="color: var(--muted);">Seeding demo data, please wait...</em>';
+            
+            const prompts = [
+              "Classify customer reviews by sentiment with a small labeled dataset",
+              "Predict house prices from numerical features",
+              "Cluster customers into segments based on transactions",
+              "Forecast monthly demand with trend and seasonality",
+              "Detect anomalies in server metrics with rare spikes",
+              "Recommend items to users based on interaction history",
+              "Fine-tune a BERT model to classify support tickets by topic",
+              "Image classification for plant diseases using transfer learning",
+              "Object detection for detecting cars and pedestrians in street images",
+              "Train an agent with reinforcement learning to maximize long-term rewards",
+              "Estimate causal effect of a marketing campaign on sales using observational data",
+              "Visualize high-dimensional embeddings with PCA and UMAP",
+              "Classify documents with a clear margin between classes using SVM",
+              "Use KNN to classify iris flowers with standardized features",
+              "Use LSTM to forecast a multivariate time series with long dependencies",
+            ];
+            
+            try {{
+              let successCount = 0;
+              let errorCount = 0;
+              
+              for (const prompt of prompts) {{
+                try {{
+                  const response = await fetch('/api/recommend', {{
+                    method: 'POST',
+                    headers: {{ 'Content-Type': 'application/json' }},
+                    body: JSON.stringify({{ prompt: prompt }})
+                  }});
+                  
+                  if (response.ok) {{
+                    successCount++;
+                  }} else {{
+                    errorCount++;
+                  }}
+                }} catch (err) {{
+                  errorCount++;
+                }}
+              }}
+              
+              if (errorCount === 0) {{
+                statusDiv.innerHTML = '<strong style="color: var(--good);">✓ Successfully seeded ' + successCount + ' prompts!</strong> Refreshing page...';
+                setTimeout(() => {{
+                  window.location.reload();
+                }}, 1000);
+              }} else {{
+                statusDiv.innerHTML = '<strong style="color: var(--warning);">⚠ Seeded ' + successCount + ' prompts, ' + errorCount + ' errors.</strong> Refreshing page...';
+                setTimeout(() => {{
+                  window.location.reload();
+                }}, 2000);
+              }}
+            }} catch (error) {{
+              statusDiv.innerHTML = '<strong style="color: var(--danger);">✗ Error seeding data: ' + error.message + '</strong>';
+              btn.disabled = false;
+              btn.textContent = originalText;
+            }}
+          }}
+        </script>
       </body>
     </html>
     """
