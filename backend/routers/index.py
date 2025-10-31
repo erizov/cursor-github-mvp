@@ -653,11 +653,91 @@ async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 30) -> JSONRe
 # Serve frontend assets: /index.html and /styles.css
 
 @router.get("/index.html")
-async def index_html() -> FileResponse:
-    path = Path(__file__).resolve().parents[2] / "frontend" / "index.html"
-    if not path.exists():
-        return HTMLResponse(content=_html_page("Index", "<p>frontend/index.html not found.</p>"), status_code=404)
-    return FileResponse(str(path), media_type="text/html")
+async def index_html() -> HTMLResponse:
+    """Home page with links to API and endpoints."""
+    body = """
+      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h1>AI Algorithm Teacher</h1>
+        <p class="small" style="margin: 0 0 32px; font-size: 1.125rem;">Algorithm recommendation API with analytics and monitoring</p>
+        
+        <h2>Quick Links</h2>
+        <ul>
+          <li>
+            <a href="/api">📋 API Index</a>
+            <span class="small">Browse all available endpoints with descriptions</span>
+          </li>
+          <li>
+            <a href="/api/reports/usage.html">📊 Usage Report</a>
+            <span class="small">View algorithm usage statistics with interactive charts</span>
+          </li>
+          <li>
+            <a href="/api/reports/details.html">📑 Detailed Report</a>
+            <span class="small">See detailed prompts and selections grouped by algorithm</span>
+          </li>
+          <li>
+            <a href="/docs">📚 Swagger UI</a>
+            <span class="small">Interactive API documentation and testing interface</span>
+          </li>
+          <li>
+            <a href="/redoc">📖 ReDoc</a>
+            <span class="small">Alternative API documentation view</span>
+          </li>
+          <li>
+            <a href="/metrics.html">📈 Metrics</a>
+            <span class="small">Prometheus metrics dashboard</span>
+          </li>
+          <li>
+            <a href="/api/reports">📋 Reports Index</a>
+            <span class="small">All reports and monitoring endpoints</span>
+          </li>
+          <li>
+            <a href="/api/tests">🧪 Test Endpoints</a>
+            <span class="small">Run tests and view test results</span>
+          </li>
+          <li>
+            <a href="/index.json">📄 All Endpoints (JSON)</a>
+            <span class="small">Complete endpoint listing in JSON format</span>
+          </li>
+        </ul>
+        
+        <h2>API Endpoints</h2>
+        <ul>
+          <li>
+            <code>POST /api/recommend</code>
+            <span class="small">Get AI/ML algorithm recommendations for a natural-language prompt</span>
+          </li>
+          <li>
+            <code>GET /api/reports/usage</code>
+            <span class="small">Algorithm usage statistics (JSON)</span>
+          </li>
+          <li>
+            <code>GET /api/reports/usage.html</code>
+            <span class="small">Usage report with charts (HTML)</span>
+          </li>
+          <li>
+            <code>GET /api/reports/details</code>
+            <span class="small">Detailed report by algorithm (JSON)</span>
+          </li>
+          <li>
+            <code>POST /api/tests/run</code>
+            <span class="small">Run all tests</span>
+          </li>
+          <li>
+            <code>POST /api/tests/unit</code>
+            <span class="small">Run unit tests only</span>
+          </li>
+          <li>
+            <code>POST /api/tests/pipeline</code>
+            <span class="small">Run e2e pipeline test</span>
+          </li>
+          <li>
+            <code>POST /api/cleanup/images</code>
+            <span class="small">Clean up old Docker images</span>
+          </li>
+        </ul>
+      </div>
+    """
+    return HTMLResponse(content=_html_page("Home", body))
 
 
 @router.get("/styles.css")
