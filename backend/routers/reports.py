@@ -197,7 +197,14 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <a href="/docs">📚 Docs</a>
             <a href="/api/reports/usage">📊 JSON</a>
             <a href="/api/reports/details.html">📑 Details</a>
-            <button onclick="seedDemoData()" id="seedBtn" style="margin-left: auto; padding: 8px 16px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; font-family: 'Inter', sans-serif;">🌱 Seed Demo Data</button>
+            <select id="seedCount" style="padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.875rem; cursor: pointer;">
+              <option value="10">10 prompts</option>
+              <option value="100">100 prompts</option>
+              <option value="1000" selected>1,000 prompts</option>
+              <option value="10000">10,000 prompts</option>
+              <option value="100000">100,000 prompts</option>
+            </select>
+            <button onclick="seedDemoData()" id="seedBtn" style="margin-left: 8px; padding: 8px 16px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; font-family: 'Inter', sans-serif;">🌱 Seed Demo Data</button>
           </div>
           <h1>Usage Report</h1>
           <div class="sub">Algorithm usage statistics and visualizations</div>
@@ -334,15 +341,18 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
         <script>
           async function seedDemoData() {{
             const btn = document.getElementById('seedBtn');
+            const seedCountSelect = document.getElementById('seedCount');
             const statusDiv = document.getElementById('seedStatus');
             const originalText = btn.textContent;
+            const targetCount = parseInt(seedCountSelect.value, 10);
             
             btn.disabled = true;
+            seedCountSelect.disabled = true;
             btn.textContent = '🌱 Seeding...';
             statusDiv.style.display = 'block';
-            statusDiv.innerHTML = '<em style="color: var(--muted);">Seeding demo data, please wait...</em>';
+            statusDiv.innerHTML = '<em style="color: var(--muted);">Seeding ' + targetCount.toLocaleString() + ' prompts, please wait...</em>';
             
-            const prompts = [
+            const basePrompts = [
               "Classify customer reviews by sentiment with a small labeled dataset",
               "Predict house prices from numerical features",
               "Cluster customers into segments based on transactions",
@@ -360,35 +370,62 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
               "Use LSTM to forecast a multivariate time series with long dependencies",
             ];
             
+            // Generate the required number of prompts by cycling through base prompts
+            const prompts = [];
+            for (let i = 0; i < targetCount; i++) {{
+              const basePrompt = basePrompts[i % basePrompts.length];
+              if (i < basePrompts.length) {{
+                prompts.push(basePrompt);
+              }} else {{
+                // Add variation to prompts for larger counts
+                prompts.push(basePrompt + ' (variant ' + Math.floor(i / basePrompts.length) + ')');
+              }}
+            }}
+            
             try {{
               let successCount = 0;
               let errorCount = 0;
+              let processed = 0;
               
-              for (const prompt of prompts) {{
-                try {{
-                  const response = await fetch('/api/recommend', {{
-                    method: 'POST',
-                    headers: {{ 'Content-Type': 'application/json' }},
-                    body: JSON.stringify({{ prompt: prompt }})
-                  }});
-                  
-                  if (response.ok) {{
-                    successCount++;
-                  }} else {{
+              // Process in batches to show progress
+              const batchSize = 50;
+              for (let i = 0; i < prompts.length; i += batchSize) {{
+                const batch = prompts.slice(i, Math.min(i + batchSize, prompts.length));
+                const promises = batch.map(async (prompt) => {{
+                  try {{
+                    const response = await fetch('/api/recommend', {{
+                      method: 'POST',
+                      headers: {{ 'Content-Type': 'application/json' }},
+                      body: JSON.stringify({{ prompt: prompt }})
+                    }});
+                    
+                    if (response.ok) {{
+                      successCount++;
+                    }} else {{
+                      errorCount++;
+                    }}
+                    processed++;
+                    
+                    // Update progress every 50 requests or at the end
+                    if (processed % 50 === 0 || processed === prompts.length) {{
+                      statusDiv.innerHTML = '<em style="color: var(--muted);">Seeding... ' + processed.toLocaleString() + ' / ' + targetCount.toLocaleString() + ' (' + Math.round(processed / targetCount * 100) + '%)</em>';
+                    }}
+                  }} catch (err) {{
                     errorCount++;
+                    processed++;
                   }}
-                }} catch (err) {{
-                  errorCount++;
-                }}
+                }});
+                
+                await Promise.all(promises);
               }}
               
               if (errorCount === 0) {{
-                statusDiv.innerHTML = '<strong style="color: var(--good);">✓ Successfully seeded ' + successCount + ' prompts!</strong> Refreshing page...';
+                statusDiv.innerHTML = '<strong style="color: var(--good);">✓ Successfully seeded ' + successCount.toLocaleString() + ' prompts!</strong> Refreshing page...';
                 setTimeout(() => {{
                   window.location.reload();
                 }}, 1000);
               }} else {{
-                statusDiv.innerHTML = '<strong style="color: var(--warning);">⚠ Seeded ' + successCount + ' prompts, ' + errorCount + ' errors.</strong> Refreshing page...';
+                statusDiv.innerHTML = '<strong style="color: var(--warning);">⚠ Seeded ' + successCount.toLocaleString() + ' prompts, ' + errorCount + ' errors.</strong> Refreshing page...';
                 setTimeout(() => {{
                   window.location.reload();
                 }}, 2000);
@@ -396,6 +433,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             }} catch (error) {{
               statusDiv.innerHTML = '<strong style="color: var(--danger);">✗ Error seeding data: ' + error.message + '</strong>';
               btn.disabled = false;
+              seedCountSelect.disabled = false;
               btn.textContent = originalText;
             }}
           }}
