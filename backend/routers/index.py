@@ -103,9 +103,11 @@ async def root_index_json(request: Request) -> JSONResponse:
             "docs": {"swagger": "/docs", "redoc": "/redoc"},
             "help": {
                 "readme": "/readme",
-                "metrics": "/metrics",
-                "usage_report": "/api/reports/usage",
+                "reports": "/api/reports",
+                "monitoring": "/api/monitoring",
                 "run_tests": "/api/tests/run",
+                "unit_tests": "/api/tests/unit",
+                "pipeline_test": "/api/tests/pipeline",
             },
             "endpoints": routes_sorted,
         }
@@ -117,14 +119,20 @@ async def api_index(request: Request) -> HTMLResponse:
     links = "\n".join(
         [
             _link("/api/recommend", "POST /api/recommend"),
+            _link("/api/reports", "GET /api/reports", "Reports & Monitoring Index"),
             _link("/api/reports/usage", "GET /api/reports/usage"),
             _link("/api/reports/usage.html", "GET /api/reports/usage.html", "HTML"),
             _link("/api/reports/details", "GET /api/reports/details"),
             _link("/api/reports/details.html", "GET /api/reports/details.html", "HTML"),
-            _link("/api/tests/run", "POST /api/tests/run", "long-running"),
+            _link("/api/monitoring", "GET /api/monitoring", "Monitoring Index"),
+            _link("/metrics", "GET /metrics", "Prometheus"),
+            _link("/metrics.html", "GET /metrics.html", "Prometheus HTML"),
+            _link("/api/tests", "GET /api/tests", "Tests Index"),
+            _link("/api/tests/run", "POST /api/tests/run", "All Tests"),
+            _link("/api/tests/unit", "POST /api/tests/unit", "Unit Tests"),
+            _link("/api/tests/pipeline", "POST /api/tests/pipeline", "Pipeline Test"),
             _link("/docs", "Swagger UI"),
             _link("/redoc", "ReDoc"),
-            _link("/metrics", "Prometheus Metrics"),
             _link("/readme", "Project README"),
         ]
     )
@@ -199,6 +207,109 @@ async def run_tests(scope: Optional[str] = None) -> JSONResponse:
 async def run_tests_get() -> JSONResponse:
     return await run_tests(scope=None)
 
+
+@router.post("/api/tests/unit")
+async def run_unit_tests() -> JSONResponse:
+    """Run unit tests only (excludes Docker and e2e tests)."""
+    project_root = Path(__file__).resolve().parents[2]
+    # Exclude Docker and e2e tests
+    cmd = [sys.executable, "-m", "pytest", "-q", "-k", "not docker and not e2e", "tests/"]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(project_root),
+            timeout=300,
+        )
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "passed": proc.returncode == 0,
+                "test_type": "unit",
+            }
+        )
+    except subprocess.TimeoutExpired as exc:
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "error": "timeout",
+                "stdout": exc.stdout or "",
+                "stderr": exc.stderr or "",
+                "test_type": "unit",
+            },
+            status_code=504,
+        )
+
+
+@router.get("/api/tests/unit")
+async def run_unit_tests_get() -> JSONResponse:
+    """Run unit tests (GET convenience method)."""
+    return await run_unit_tests()
+
+
+@router.post("/api/tests/pipeline")
+async def run_pipeline_test() -> JSONResponse:
+    """Run the e2e pipeline test script (PowerShell)."""
+    project_root = Path(__file__).resolve().parents[2]
+    pipeline_script = project_root / "e2e" / "pipeline.ps1"
+    
+    if not pipeline_script.exists():
+        return JSONResponse(
+            {"error": f"Pipeline script not found: {pipeline_script}"},
+            status_code=404,
+        )
+    
+    # Run PowerShell script
+    cmd = ["pwsh", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(pipeline_script)]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(project_root),
+            timeout=600,
+        )
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "passed": proc.returncode == 0,
+                "test_type": "pipeline",
+            }
+        )
+    except subprocess.TimeoutExpired as exc:
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "error": "timeout",
+                "stdout": exc.stdout or "",
+                "stderr": exc.stderr or "",
+                "test_type": "pipeline",
+            },
+            status_code=504,
+        )
+    except FileNotFoundError:
+        return JSONResponse(
+            {
+                "error": "PowerShell (pwsh) not found. Please install PowerShell Core.",
+                "command": " ".join(cmd),
+                "test_type": "pipeline",
+            },
+            status_code=503,
+        )
+
+
+@router.get("/api/tests/pipeline")
+async def run_pipeline_test_get() -> JSONResponse:
+    """Run pipeline test (GET convenience method)."""
+    return await run_pipeline_test()
+
 # Serve frontend assets: /index.html and /styles.css
 
 @router.get("/index.html")
@@ -215,6 +326,68 @@ async def styles_css() -> FileResponse:
     if not path.exists():
         return PlainTextResponse("/* styles.css not found */", status_code=404, media_type="text/css")
     return FileResponse(str(path), media_type="text/css")
+
+
+@router.get("/api/tests")
+async def tests_index() -> JSONResponse:
+    """Index of all test endpoints."""
+    return JSONResponse(
+        {
+            "tests": {
+                "all": {
+                    "endpoint": "/api/tests/run",
+                    "methods": ["GET", "POST"],
+                    "description": "Run all tests (default: pytest -q tests/)",
+                    "params": {
+                        "scope": "Optional test path (e.g., 'tests/test_e2e.py')",
+                    },
+                },
+                "unit": {
+                    "endpoint": "/api/tests/unit",
+                    "methods": ["GET", "POST"],
+                    "description": "Run unit tests only (excludes Docker and e2e)",
+                    "command": "pytest -q -k 'not docker and not e2e' tests/",
+                },
+                "pipeline": {
+                    "endpoint": "/api/tests/pipeline",
+                    "methods": ["GET", "POST"],
+                    "description": "Run e2e pipeline test (builds Docker, runs container, verifies endpoints)",
+                    "script": "e2e/pipeline.ps1",
+                },
+            },
+            "links": {
+                "api_index": "/api",
+                "reports": "/api/reports",
+                "monitoring": "/api/monitoring",
+            },
+        }
+    )
+
+
+@router.get("/api/monitoring")
+async def monitoring_index() -> JSONResponse:
+    """Index of all monitoring endpoints."""
+    return JSONResponse(
+        {
+            "monitoring": {
+                "prometheus": {
+                    "text": "/metrics",
+                    "html": "/metrics.html",
+                    "description": "Prometheus metrics in plain text (for scraping) and HTML formats",
+                },
+            },
+            "available_metrics": {
+                "recommendations_total": "Total number of recommendation requests served",
+                "algorithm_top_selections_total": "Count of top recommended algorithms by name",
+            },
+            "links": {
+                "prometheus_text": "/metrics",
+                "prometheus_html": "/metrics.html",
+                "reports": "/api/reports",
+                "api_index": "/api",
+            },
+        }
+    )
 
 
 @router.get("/metrics.html", response_class=HTMLResponse)

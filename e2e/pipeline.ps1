@@ -1,11 +1,17 @@
 param(
-    [string]$ImageTag = "algorithm-teacher:pipeline",
+    [string]$ImageTag = "",
     [string]$ContainerName = "algo-pipeline",
     [int]$Port = 8000,
     [int]$TimeoutSec = 60
 )
 
 $ErrorActionPreference = "Stop"
+
+# Generate timestamped image name if not provided: alg-teach-yyyymmdd-hhmmss
+if ([string]::IsNullOrEmpty($ImageTag)) {
+    $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $ImageTag = "alg-teach-$timestamp"
+}
 
 function Write-Step($msg) {
     Write-Host ("[STEP] " + $msg)
