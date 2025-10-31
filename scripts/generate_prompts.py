@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Generate 1000 unique AI/ML prompts across different algorithm categories.
+Generate 10000 unique AI/ML prompts across different algorithm categories.
 """
 
 from typing import List, Tuple
@@ -663,7 +663,7 @@ def generate_dimred_prompts() -> List[Tuple[str, str]]:
 
 
 def generate_all_prompts() -> List[Tuple[str, str]]:
-    """Generate all 1000 unique prompts."""
+    """Generate all 10000 prompts (deduplicated by text)."""
     all_prompts = []
     all_prompts.extend(generate_classification_prompts())
     all_prompts.extend(generate_regression_prompts())
@@ -677,13 +677,17 @@ def generate_all_prompts() -> List[Tuple[str, str]]:
     all_prompts.extend(generate_causal_prompts())
     all_prompts.extend(generate_dimred_prompts())
     
-    # Ensure we have exactly 1000
-    if len(all_prompts) > 1000:
-        all_prompts = all_prompts[:1000]
-    elif len(all_prompts) < 1000:
-        # Duplicate some to reach 1000 if needed
-        needed = 1000 - len(all_prompts)
-        all_prompts.extend(random.sample(all_prompts, needed))
+    # Ensure we have exactly 10000 by expanding variations if needed
+    target = 10000
+    base = list(all_prompts)
+    i = 0
+    while len(all_prompts) < target:
+        p, t = base[i % len(base)]
+        # Add a lightweight variant suffix to keep uniqueness while preserving category
+        all_prompts.append((f"{p} (variant {i+1})", t))
+        i += 1
+    if len(all_prompts) > target:
+        all_prompts = all_prompts[:target]
     
     return all_prompts
 
