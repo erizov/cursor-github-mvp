@@ -1,4 +1,4 @@
-# test (unit and small integration)
+# tests (unit and small integration)
 
 This directory is reserved for unit tests and small integration tests.
 
