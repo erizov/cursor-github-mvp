@@ -58,9 +58,20 @@ class MongoSelectionRepository:
         return docs
 
 
+# Singleton instance for in-memory repository to persist across requests
+_in_memory_selection_repo_instance: "InMemorySelectionRepository | None" = None
+
 class InMemorySelectionRepository:
     def __init__(self) -> None:
         self._items: List[dict] = []
+    
+    @classmethod
+    def get_instance(cls) -> "InMemorySelectionRepository":
+        """Get singleton instance that persists across requests."""
+        global _in_memory_selection_repo_instance
+        if _in_memory_selection_repo_instance is None:
+            _in_memory_selection_repo_instance = cls()
+        return _in_memory_selection_repo_instance
 
     async def add_selection(self, algorithm: str, prompt: str) -> None:
         self._items.append({
@@ -167,9 +178,20 @@ class MongoUniqueRequestRepository:
         return docs
 
 
+# Singleton instance for in-memory unique request repository
+_in_memory_unique_repo_instance: "InMemoryUniqueRequestRepository | None" = None
+
 class InMemoryUniqueRequestRepository:
     def __init__(self) -> None:
         self._items: List[dict] = []
+    
+    @classmethod
+    def get_instance(cls) -> "InMemoryUniqueRequestRepository":
+        """Get singleton instance that persists across requests."""
+        global _in_memory_unique_repo_instance
+        if _in_memory_unique_repo_instance is None:
+            _in_memory_unique_repo_instance = cls()
+        return _in_memory_unique_repo_instance
 
     def _normalize_prompt(self, prompt: str) -> str:
         return " ".join(prompt.lower().strip().split())

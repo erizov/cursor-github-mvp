@@ -19,7 +19,7 @@ router = APIRouter(tags=["reports"])
 async def get_repo():
     use_in_memory = os.getenv("USE_IN_MEMORY", "1") == "1"
     if use_in_memory:
-        return InMemorySelectionRepository()
+        return InMemorySelectionRepository.get_instance()
     db = get_db()
     return MongoSelectionRepository(db)
 

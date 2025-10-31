@@ -20,8 +20,8 @@ router = APIRouter(tags=["recommendations"])
 async def get_service():
     use_in_memory = os.getenv("USE_IN_MEMORY", "1") == "1"
     if use_in_memory:
-        repo = InMemorySelectionRepository()
-        unique_repo = InMemoryUniqueRequestRepository()
+        repo = InMemorySelectionRepository.get_instance()
+        unique_repo = InMemoryUniqueRequestRepository.get_instance()
         return RecommendationService(repo, unique_repo)
     db = get_db()
     repo = MongoSelectionRepository(db)
