@@ -11,6 +11,7 @@ from backend.models import (
 )
 from backend.repositories import MongoSelectionRepository, InMemorySelectionRepository
 from backend.db import get_db
+from backend.services import get_algorithm_type_from_algorithm
 
 
 router = APIRouter(tags=["reports"])
@@ -71,13 +72,32 @@ def _format_label(key: str) -> str:
 
 
 def _merge_counts(counts: list[dict]) -> list[dict]:
-    merged: dict[str, int] = {}
+    """Merge counts by algorithm type (25 categories) instead of algorithm name.
+    
+    Always returns all 25 algorithm type categories, even if some have zero counts.
+    """
+    # Initialize all 25 algorithm type categories
+    all_categories = [
+        "Classification", "Regression", "Clustering", "Dimensionality Reduction",
+        "Time Series", "Sequence Models", "NLP", "Vision", "Computer Vision Detection",
+        "Anomaly Detection", "Recommender Systems", "Reinforcement Learning",
+        "Causal Inference", "Ensemble Methods", "Optimization", "Graph Algorithms",
+        "Transfer Learning", "Generative Models", "Natural Language Generation",
+        "Feature Engineering", "Deep Learning", "Computer Vision Segmentation",
+        "Multi-modal Learning", "AutoML", "Other"
+    ]
+    merged: dict[str, int] = {cat: 0 for cat in all_categories}
+    
+    # Add actual counts from data
     for c in counts:
         raw_label = c["algorithm"] if isinstance(c, dict) else c.algorithm  # type: ignore[attr-defined]
-        key = _normalize_key(str(raw_label))
+        # Use algorithm type classification instead of normalization
+        algorithm_type = get_algorithm_type_from_algorithm(str(raw_label))
         val = int(c["count"] if isinstance(c, dict) else c.count)  # type: ignore[attr-defined]
-        merged[key] = merged.get(key, 0) + val
-    out = [{"algorithm": _format_label(k), "count": v} for k, v in merged.items()]
+        merged[algorithm_type] = merged.get(algorithm_type, 0) + val
+    
+    # Return all categories, sorted by count (descending) then alphabetically
+    out = [{"algorithm": k, "count": v} for k, v in merged.items()]
     out.sort(key=lambda x: (-x["count"], x["algorithm"]))
     return out
 
@@ -121,14 +141,19 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             """
         )
 
-    # Prepare data for charts
-    chart_labels = [c["algorithm"] for c in counts[:10]]  # Top 10
-    chart_data = [c["count"] for c in counts[:10]]
+    # Prepare data for charts (show top 25 categories)
+    chart_labels = [c["algorithm"] for c in counts[:25]]
+    chart_data = [c["count"] for c in counts[:25]]
     chart_colors = [
         "rgba(122, 162, 247, 0.8)", "rgba(139, 213, 202, 0.8)", "rgba(106, 214, 154, 0.8)",
         "rgba(251, 191, 36, 0.8)", "rgba(239, 68, 68, 0.8)", "rgba(167, 139, 250, 0.8)",
         "rgba(244, 114, 182, 0.8)", "rgba(34, 197, 94, 0.8)", "rgba(59, 130, 246, 0.8)",
-        "rgba(249, 115, 22, 0.8)"
+        "rgba(249, 115, 22, 0.8)", "rgba(168, 85, 247, 0.8)", "rgba(236, 72, 153, 0.8)",
+        "rgba(14, 165, 233, 0.8)", "rgba(20, 184, 166, 0.8)", "rgba(245, 158, 11, 0.8)",
+        "rgba(217, 70, 239, 0.8)", "rgba(99, 102, 241, 0.8)", "rgba(225, 29, 72, 0.8)",
+        "rgba(6, 182, 212, 0.8)", "rgba(16, 185, 129, 0.8)", "rgba(251, 146, 60, 0.8)",
+        "rgba(139, 92, 246, 0.8)", "rgba(59, 130, 246, 0.8)", "rgba(236, 72, 153, 0.8)",
+        "rgba(34, 211, 238, 0.8)"
     ]
     
     body = f"""

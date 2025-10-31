@@ -50,7 +50,9 @@
           'Time Series', 'Sequence Models', 'NLP', 'Vision', 'Computer Vision Detection',
           'Anomaly Detection', 'Recommender Systems', 'Reinforcement Learning',
           'Causal Inference', 'Ensemble Methods', 'Optimization', 'Graph Algorithms',
-          'Transfer Learning', 'Generative Models', 'Natural Language Generation', 'Other'
+          'Transfer Learning', 'Generative Models', 'Natural Language Generation',
+          'Feature Engineering', 'Deep Learning', 'Computer Vision Segmentation',
+          'Multi-modal Learning', 'AutoML', 'Other'
         ];
 
         const load = async () => {
@@ -180,6 +182,11 @@
           if (n.includes('transfer') || n.includes('fine-tun') || n.includes('pretrain')) return 'Transfer Learning';
           if (n.includes('gan') || n.includes('vae') || n.includes('generative') || n.includes('diffusion')) return 'Generative Models';
           if (n.includes('generation') || n.includes('summariz') || n.includes('text generation')) return 'Natural Language Generation';
+          if (n.includes('feature engineering') || n.includes('feature selection') || n.includes('feature extraction')) return 'Feature Engineering';
+          if (n.includes('deep learning') || n.includes('neural network') || n.includes('dnn') || n.includes('mlp')) return 'Deep Learning';
+          if (n.includes('segmentation') || n.includes('semantic segmentation') || n.includes('instance segmentation')) return 'Computer Vision Segmentation';
+          if (n.includes('multi-modal') || n.includes('multimodal') || n.includes('cross-modal')) return 'Multi-modal Learning';
+          if (n.includes('automl') || n.includes('auto-ml') || n.includes('automated machine learning') || n.includes('neural architecture search')) return 'AutoML';
           return 'Other';
         };
 

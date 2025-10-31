@@ -2,16 +2,33 @@ param(
     [string]$ImageTag = "",
     [string]$ContainerName = "algo-pipeline",
     [int]$Port = 8000,
-    [int]$TimeoutSec = 60
+    [int]$TimeoutSec = 60,
+    [string]$Backend = "inmemory",
+    [string]$MongoContainer = "algo-mongo-pipeline"
 )
 
 $ErrorActionPreference = "Stop"
 
-# Generate timestamped image name if not provided: alg-teach-yyyymmdd-hhmmss
+# Generate timestamped image name if not provided: alg-teach-backend-yyyymmdd-hhmmss
 if ([string]::IsNullOrEmpty($ImageTag)) {
     $timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $ImageTag = "alg-teach-$timestamp"
+    $ImageTag = "alg-teach-$Backend-$timestamp"
 }
+
+# Validate backend
+$validBackends = @("inmemory", "mongodb", "sqlite")
+if ($validBackends -notcontains $Backend) {
+    Write-Error "Invalid backend: $Backend. Must be one of: $($validBackends -join ', ')"
+    exit 1
+}
+
+# Set Dockerfile path based on backend
+$dockerfileMap = @{
+    "inmemory" = "deployment/Dockerfile.inmemory"
+    "mongodb" = "deployment/Dockerfile.mongodb"
+    "sqlite" = "deployment/Dockerfile.sqlite"
+}
+$DockerfilePath = $dockerfileMap[$Backend]
 
 function Write-Step($msg) {
     Write-Host ("[STEP] " + $msg)
@@ -25,15 +42,46 @@ function Assert-LastExit($msg) {
 }
 
 try {
-    Write-Step "Building Docker image $ImageTag"
-    docker build -f deployment/Dockerfile -t $ImageTag .
+    # Start MongoDB if needed
+    if ($Backend -eq "mongodb") {
+        Write-Step "Starting MongoDB container $MongoContainer"
+        docker rm -f $MongoContainer 2>$null | Out-Null
+        $mongoNetwork = "algo-network-pipeline"
+        docker network create $mongoNetwork 2>$null | Out-Null
+        
+        $mongoRun = docker run -d --name $MongoContainer --network $mongoNetwork mongo:7 2>&1
+        if ($LASTEXITCODE -ne 0) {
+            Write-Error "MongoDB container start failed: $mongoRun"
+            exit 1
+        }
+        Start-Sleep -Seconds 3
+    }
+    
+    Write-Step "Building Docker image $ImageTag from $DockerfilePath"
+    docker build -f $DockerfilePath -t $ImageTag .
     Assert-LastExit "Docker build failed"
 
     Write-Step "Removing any existing container $ContainerName"
     docker rm -f $ContainerName 2>$null | Out-Null
 
-    Write-Step "Starting container $ContainerName on port $Port"
-    $runOutput = docker run -d --name $ContainerName -p "${Port}:8000" $ImageTag 2>&1
+    # Prepare docker run command
+    $dockerRunArgs = @(
+        "run", "-d",
+        "--name", $ContainerName,
+        "-p", "${Port}:8000"
+    )
+    
+    if ($Backend -eq "mongodb") {
+        $dockerRunArgs += @(
+            "--network", $mongoNetwork,
+            "-e", "MONGODB_URI=mongodb://$MongoContainer:27017"
+        )
+    }
+    
+    $dockerRunArgs += @($ImageTag)
+    
+    Write-Step "Starting container $ContainerName on port $Port (backend: $Backend)"
+    $runOutput = docker $dockerRunArgs 2>&1
     if ($LASTEXITCODE -ne 0) {
         Write-Error "Docker run failed: $runOutput"
         exit 1
@@ -77,4 +125,10 @@ try {
 } finally {
     Write-Step "Cleaning up container $ContainerName"
     docker rm -f $ContainerName 2>$null | Out-Null
+    
+    if ($Backend -eq "mongodb") {
+        Write-Step "Cleaning up MongoDB container $MongoContainer"
+        docker rm -f $MongoContainer 2>$null | Out-Null
+        docker network rm algo-network-pipeline 2>$null | Out-Null
+    }
 }

@@ -189,7 +189,11 @@ def _html_page(title: str, body: str) -> str:
         resultDiv.innerHTML = '<em style="color: var(--muted);">Executing...</em>';
         
         try {{
-          const response = await fetch(endpoint, {{
+          const url = endpoint.includes('?') ? endpoint.split('?')[0] : endpoint;
+          const params = endpoint.includes('?') ? endpoint.split('?')[1] : null;
+          const urlObj = params ? new URLSearchParams(params) : null;
+          
+          const response = await fetch(url + (urlObj ? '?' + urlObj.toString() : ''), {{
             method: 'POST',
             headers: {{
               'Content-Type': 'application/json',
@@ -237,31 +241,22 @@ def _collect_routes(request: Request) -> list[dict]:
 
 @router.get("/", response_class=HTMLResponse)
 async def root_index(request: Request) -> HTMLResponse:
-    routes_sorted = _collect_routes(request)
-    links_html = "\n".join(
-        f"<li><a href=\"{r['path']}\">{r['path']}</a> "
-        f"<span class=\"pill\">{','.join(r['methods'])}</span></li>"
-        for r in routes_sorted
-    )
     nav = "\n".join(
         [
-            _link("/api", "API Index"),
-            _link("/docs", "Swagger UI", "OpenAPI"),
-            _link("/redoc", "ReDoc", "OpenAPI"),
-            _link("/metrics", "Prometheus Metrics"),
-            _link("/readme", "Project README"),
-            _link("/index.json", "Endpoints (JSON)"),
+            _link("/api/reports", "📊 All Reports"),
+            _link("/api/tests/unit.html", "🧪 Unit Tests"),
+            _link("/api/tests/e2e.html", "🔬 E2E Tests"),
+            _link("/api/tests/pipeline.html", "🚀 Pipeline"),
+            _link("/api", "📋 API Index"),
+            _link("/docs", "📚 Swagger UI", "OpenAPI"),
+            _link("/readme", "📖 Project README"),
         ]
     )
     body = f"""
       <h1>AI Algorithm Teacher</h1>
-      <p class=\"small\">Discovered endpoints below. Methods show as badges.</p>
-      <h2>Quick Links</h2>
+      <p class=\"small\">Algorithm recommendation API with analytics and monitoring</p>
+      <h2>Main Pages</h2>
       <ul>{nav}</ul>
-      <h2>Endpoints</h2>
-      <ul>
-        {links_html}
-      </ul>
     """
     return HTMLResponse(content=_html_page("Home", body))
 
@@ -412,7 +407,7 @@ async def api_index(request: Request) -> HTMLResponse:
                 {
                     "method": "POST",
                     "path": "/api/cleanup/images",
-                    "description": "Clean up old Docker images matching alg-teach-* pattern (default: older than 30 minutes)"
+                    "description": "Clean up unused Docker images matching alg-teach-* pattern (default: unused for more than 15 minutes)"
                 }
             ]
         },
@@ -632,8 +627,8 @@ async def run_pipeline_test() -> JSONResponse:
 
 
 @router.post("/api/cleanup/images")
-async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 30) -> JSONResponse:
-    """Clean up old Docker images matching alg-teach-* pattern."""
+async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 15) -> JSONResponse:
+    """Clean up unused Docker images matching alg-teach-* pattern that are unused for more than specified minutes."""
     project_root = Path(__file__).resolve().parents[2]
     cleanup_script = project_root / "scripts" / "cleanup_old_images.py"
     
@@ -685,79 +680,39 @@ async def index_html() -> HTMLResponse:
         <h1>AI Algorithm Teacher</h1>
         <p class="small" style="margin: 0 0 32px; font-size: 1.125rem;">Algorithm recommendation API with analytics and monitoring</p>
         
-        <h2>Quick Links</h2>
+        <h2>Main Pages</h2>
+        <ul>
+          <li>
+            <a href="/api/reports">📊 All Reports</a>
+            <span class="small">View all reports and monitoring pages</span>
+          </li>
+          <li>
+            <a href="/api/tests/unit.html">🧪 Unit Tests</a>
+            <span class="small">Run and view unit test results</span>
+          </li>
+          <li>
+            <a href="/api/tests/e2e.html">🔬 E2E Tests</a>
+            <span class="small">Run and view end-to-end test results</span>
+          </li>
+          <li>
+            <a href="/api/tests/pipeline.html">🚀 Pipeline</a>
+            <span class="small">Run and view pipeline test results</span>
+          </li>
+        </ul>
+        
+        <h2>Additional Links</h2>
         <ul>
           <li>
             <a href="/api">📋 API Index</a>
             <span class="small">Browse all available endpoints with descriptions</span>
           </li>
           <li>
-            <a href="/api/reports/usage.html">📊 Usage Report</a>
-            <span class="small">View algorithm usage statistics with interactive charts</span>
-          </li>
-          <li>
-            <a href="/api/reports/details.html">📑 Detailed Report</a>
-            <span class="small">See detailed prompts and selections grouped by algorithm</span>
-          </li>
-          <li>
             <a href="/docs">📚 Swagger UI</a>
             <span class="small">Interactive API documentation and testing interface</span>
           </li>
           <li>
-            <a href="/redoc">📖 ReDoc</a>
-            <span class="small">Alternative API documentation view</span>
-          </li>
-          <li>
-            <a href="/metrics.html">📈 Metrics</a>
-            <span class="small">Prometheus metrics dashboard</span>
-          </li>
-          <li>
-            <a href="/api/reports">📋 Reports Index</a>
-            <span class="small">All reports and monitoring endpoints</span>
-          </li>
-          <li>
-            <a href="/api/tests">🧪 Test Endpoints</a>
-            <span class="small">Run tests and view test results</span>
-          </li>
-          <li>
-            <a href="/index.json">📄 All Endpoints (JSON)</a>
-            <span class="small">Complete endpoint listing in JSON format</span>
-          </li>
-        </ul>
-        
-        <h2>API Endpoints</h2>
-        <ul>
-          <li>
-            <code>POST /api/recommend</code>
-            <span class="small">Get AI/ML algorithm recommendations for a natural-language prompt</span>
-          </li>
-          <li>
-            <code>GET /api/reports/usage</code>
-            <span class="small">Algorithm usage statistics (JSON)</span>
-          </li>
-          <li>
-            <code>GET /api/reports/usage.html</code>
-            <span class="small">Usage report with charts (HTML)</span>
-          </li>
-          <li>
-            <code>GET /api/reports/details</code>
-            <span class="small">Detailed report by algorithm (JSON)</span>
-          </li>
-          <li>
-            <code>POST /api/tests/run</code>
-            <span class="small">Run all tests</span>
-          </li>
-          <li>
-            <code>POST /api/tests/unit</code>
-            <span class="small">Run unit tests only</span>
-          </li>
-          <li>
-            <code>POST /api/tests/pipeline</code>
-            <span class="small">Run e2e pipeline test</span>
-          </li>
-          <li>
-            <code>POST /api/cleanup/images</code>
-            <span class="small">Clean up old Docker images</span>
+            <a href="/readme">📖 Project README</a>
+            <span class="small">Project documentation and setup guide</span>
           </li>
         </ul>
       </div>
@@ -792,12 +747,23 @@ async def tests_index() -> JSONResponse:
                     "method": "POST",
                     "description": "Run unit tests only (excludes Docker and e2e)",
                     "command": "pytest -q -k 'not docker and not e2e' tests/",
+                    "html_page": "/api/tests/unit.html",
+                },
+                "e2e": {
+                    "endpoint": "/api/tests/run",
+                    "method": "POST",
+                    "params": {
+                        "scope": "tests/test_e2e.py",
+                    },
+                    "description": "Run end-to-end tests",
+                    "html_page": "/api/tests/e2e.html",
                 },
                 "pipeline": {
                     "endpoint": "/api/tests/pipeline",
                     "method": "POST",
                     "description": "Run e2e pipeline test (builds Docker, runs container, verifies endpoints)",
                     "script": "e2e/pipeline.ps1",
+                    "html_page": "/api/tests/pipeline.html",
                 },
             },
             "links": {
@@ -807,6 +773,108 @@ async def tests_index() -> JSONResponse:
             },
         }
     )
+
+
+@router.get("/api/tests/unit.html", response_class=HTMLResponse)
+async def unit_tests_page() -> HTMLResponse:
+    """HTML page for unit tests."""
+    body = """
+      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h1>🧪 Unit Tests</h1>
+        <p class="small" style="margin: 0 0 32px;">Run unit tests (excludes Docker and e2e tests)</p>
+        
+        <button onclick="executePost('/api/tests/unit', 'result_unit')">Run Unit Tests</button>
+        <div id="result_unit" style="margin-top: 16px;"></div>
+        
+        <h2>Test Information</h2>
+        <ul>
+          <li>
+            <strong>Command:</strong> <code>pytest -q -k 'not docker and not e2e' tests/</code>
+          </li>
+          <li>
+            <strong>Endpoint:</strong> <code>POST /api/tests/unit</code>
+          </li>
+          <li>
+            <strong>Description:</strong> Runs unit tests only, excluding Docker and e2e tests
+          </li>
+        </ul>
+        
+        <p style="margin-top: 32px;">
+          <a href="/index.html">← Back to Home</a> | 
+          <a href="/api/reports">View Reports</a> | 
+          <a href="/api/tests/e2e.html">E2E Tests</a> | 
+          <a href="/api/tests/pipeline.html">Pipeline Tests</a>
+        </p>
+      </div>
+    """
+    return HTMLResponse(content=_html_page("Unit Tests", body))
+
+
+@router.get("/api/tests/e2e.html", response_class=HTMLResponse)
+async def e2e_tests_page() -> HTMLResponse:
+    """HTML page for e2e tests."""
+    body = """
+      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h1>🔄 E2E Tests</h1>
+        <p class="small" style="margin: 0 0 32px;">Run end-to-end tests</p>
+        
+        <button onclick="executePost('/api/tests/run?scope=tests/test_e2e.py', 'result_e2e')">Run E2E Tests</button>
+        <div id="result_e2e" style="margin-top: 16px;"></div>
+        
+        <h2>Test Information</h2>
+        <ul>
+          <li>
+            <strong>Endpoint:</strong> <code>POST /api/tests/run?scope=tests/test_e2e.py</code>
+          </li>
+          <li>
+            <strong>Description:</strong> Runs end-to-end tests to verify the full application workflow
+          </li>
+        </ul>
+        
+        <p style="margin-top: 32px;">
+          <a href="/index.html">← Back to Home</a> | 
+          <a href="/api/reports">View Reports</a> | 
+          <a href="/api/tests/unit.html">Unit Tests</a> | 
+          <a href="/api/tests/pipeline.html">Pipeline Tests</a>
+        </p>
+      </div>
+    """
+    return HTMLResponse(content=_html_page("E2E Tests", body))
+
+
+@router.get("/api/tests/pipeline.html", response_class=HTMLResponse)
+async def pipeline_tests_page() -> HTMLResponse:
+    """HTML page for pipeline tests."""
+    body = """
+      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h1>🚀 Pipeline Tests</h1>
+        <p class="small" style="margin: 0 0 32px;">Run end-to-end pipeline test (builds Docker, runs container, verifies endpoints)</p>
+        
+        <button onclick="executePost('/api/tests/pipeline', 'result_pipeline')">Run Pipeline Test</button>
+        <div id="result_pipeline" style="margin-top: 16px;"></div>
+        
+        <h2>Test Information</h2>
+        <ul>
+          <li>
+            <strong>Endpoint:</strong> <code>POST /api/tests/pipeline</code>
+          </li>
+          <li>
+            <strong>Script:</strong> <code>e2e/pipeline.ps1</code>
+          </li>
+          <li>
+            <strong>Description:</strong> Builds Docker image, runs container, and verifies all endpoints
+          </li>
+        </ul>
+        
+        <p style="margin-top: 32px;">
+          <a href="/index.html">← Back to Home</a> | 
+          <a href="/api/reports">View Reports</a> | 
+          <a href="/api/tests/unit.html">Unit Tests</a> | 
+          <a href="/api/tests/e2e.html">E2E Tests</a>
+        </p>
+      </div>
+    """
+    return HTMLResponse(content=_html_page("Pipeline Tests", body))
 
 
 @router.get("/api/monitoring")

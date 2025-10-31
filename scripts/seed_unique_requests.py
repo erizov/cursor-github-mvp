@@ -63,6 +63,16 @@ def get_algorithm_type_from_prompt(prompt: str) -> str:
         return "Generative Models"
     elif any(x in alg_lower for x in ["generation", "summariz", "text generation"]):
         return "Natural Language Generation"
+    elif any(x in alg_lower for x in ["feature engineering", "feature selection", "feature extraction"]):
+        return "Feature Engineering"
+    elif any(x in alg_lower for x in ["deep learning", "neural network", "dnn", "mlp"]):
+        return "Deep Learning"
+    elif any(x in alg_lower for x in ["segmentation", "semantic segmentation", "instance segmentation"]):
+        return "Computer Vision Segmentation"
+    elif any(x in alg_lower for x in ["multi-modal", "multimodal", "cross-modal"]):
+        return "Multi-modal Learning"
+    elif any(x in alg_lower for x in ["automl", "auto-ml", "automated machine learning", "neural architecture search"]):
+        return "AutoML"
     else:
         return "Other"
 

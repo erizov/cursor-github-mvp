@@ -48,6 +48,16 @@ def get_algorithm_type_from_algorithm(algorithm: str) -> str:
         return "Generative Models"
     elif any(x in alg_lower for x in ["generation", "summariz", "text generation"]):
         return "Natural Language Generation"
+    elif any(x in alg_lower for x in ["feature engineering", "feature selection", "feature extraction"]):
+        return "Feature Engineering"
+    elif any(x in alg_lower for x in ["deep learning", "neural network", "dnn", "mlp"]):
+        return "Deep Learning"
+    elif any(x in alg_lower for x in ["segmentation", "semantic segmentation", "instance segmentation"]):
+        return "Computer Vision Segmentation"
+    elif any(x in alg_lower for x in ["multi-modal", "multimodal", "cross-modal"]):
+        return "Multi-modal Learning"
+    elif any(x in alg_lower for x in ["automl", "auto-ml", "automated machine learning", "neural architecture search"]):
+        return "AutoML"
     else:
         return "Other"
 
@@ -265,7 +275,7 @@ def generate_time_series_prompts() -> List[Tuple[str, str]]:
         ("Forecast advertising spend effectiveness with campaign cycles", "Time Series"),
         ("Predict processing times with workload patterns and system capacity", "Time Series"),
         ("Forecast inventory turnover with seasonal demand patterns", "Time Series"),
-        ("Predict quality metrics with production cycle patterns", "Time Series Periodic Patterns"),
+        ("Predict quality metrics with production cycle patterns", "Time Series"),
         ("Forecast patient flow in hospitals with daily and weekly patterns", "Time Series"),
         ("Predict network latency with traffic patterns and system load", "Time Series"),
         ("Forecast resource utilization with capacity planning needs", "Time Series"),
@@ -678,20 +688,319 @@ def generate_dimred_prompts() -> List[Tuple[str, str]]:
     return prompts
 
 
+def generate_sequence_models_prompts() -> List[Tuple[str, str]]:
+    """Generate sequence models prompts."""
+    prompts = [
+        ("Forecast stock prices using LSTM with historical price sequences", "Sequence Models"),
+        ("Predict next word in text using temporal neural networks", "Sequence Models"),
+        ("Model sequential user behavior patterns for personalization", "Sequence Models"),
+        ("Forecast weather patterns using temporal CNN with sensor data", "Sequence Models"),
+        ("Predict video frame sequences for motion understanding", "Sequence Models"),
+        ("Model sequential dependencies in financial time series data", "Sequence Models"),
+        ("Predict next action in sequential decision making tasks", "Sequence Models"),
+        ("Forecast demand using LSTM with seasonal and trend patterns", "Sequence Models"),
+        ("Model sequential patterns in network traffic for anomaly detection", "Sequence Models"),
+        ("Predict sequence of events in complex systems", "Sequence Models"),
+        ("Forecast energy consumption using temporal neural networks", "Sequence Models"),
+        ("Model sequential relationships in genomic sequences", "Sequence Models"),
+        ("Predict next item in shopping cart sequences", "Sequence Models"),
+        ("Forecast disease progression using temporal medical data", "Sequence Models"),
+        ("Model sequential dependencies in natural language understanding", "Sequence Models"),
+    ]
+    return prompts
+
+
+def generate_cv_detection_prompts() -> List[Tuple[str, str]]:
+    """Generate computer vision detection prompts."""
+    prompts = [
+        ("Detect cars and pedestrians in street images using YOLO", "Computer Vision Detection"),
+        ("Localize objects in images with bounding boxes for autonomous driving", "Computer Vision Detection"),
+        ("Detect and count people in crowded scenes using Faster R-CNN", "Computer Vision Detection"),
+        ("Identify and locate faces in photos for security applications", "Computer Vision Detection"),
+        ("Detect multiple objects in retail shelf images for inventory", "Computer Vision Detection"),
+        ("Localize defects in manufacturing images with precise bounding boxes", "Computer Vision Detection"),
+        ("Detect animals in wildlife camera trap images using object detection", "Computer Vision Detection"),
+        ("Identify and locate traffic signs in street view images", "Computer Vision Detection"),
+        ("Detect vehicles and obstacles for autonomous vehicle navigation", "Computer Vision Detection"),
+        ("Localize text regions in documents using object detection", "Computer Vision Detection"),
+        ("Detect and track multiple objects in video streams", "Computer Vision Detection"),
+        ("Identify and locate products on shelves for automated checkout", "Computer Vision Detection"),
+        ("Detect safety equipment in workplace surveillance footage", "Computer Vision Detection"),
+        ("Localize medical anomalies in imaging scans with bounding boxes", "Computer Vision Detection"),
+        ("Detect and count items in warehouse images for inventory management", "Computer Vision Detection"),
+    ]
+    return prompts
+
+
+def generate_ensemble_prompts() -> List[Tuple[str, str]]:
+    """Generate ensemble methods prompts."""
+    prompts = [
+        ("Improve prediction accuracy using Gradient Boosting with XGBoost", "Ensemble Methods"),
+        ("Combine multiple models using ensemble learning for robustness", "Ensemble Methods"),
+        ("Boost performance on tabular data using LightGBM gradient boosting", "Ensemble Methods"),
+        ("Optimize model predictions using CatBoost with categorical features", "Ensemble Methods"),
+        ("Create ensemble of classifiers for improved accuracy", "Ensemble Methods"),
+        ("Use gradient boosting for high-performance tabular data prediction", "Ensemble Methods"),
+        ("Combine weak learners into strong ensemble model", "Ensemble Methods"),
+        ("Apply ensemble methods for handling imbalanced datasets", "Ensemble Methods"),
+        ("Improve model generalization using gradient boosting ensemble", "Ensemble Methods"),
+        ("Combine predictions from multiple models using voting or stacking", "Ensemble Methods"),
+        ("Use XGBoost for winning performance on structured data competitions", "Ensemble Methods"),
+        ("Apply LightGBM for fast training on large tabular datasets", "Ensemble Methods"),
+        ("Boost accuracy using ensemble of gradient boosted trees", "Ensemble Methods"),
+        ("Combine neural networks with gradient boosting for hybrid models", "Ensemble Methods"),
+        ("Use ensemble methods to reduce overfitting in predictions", "Ensemble Methods"),
+    ]
+    return prompts
+
+
+def generate_optimization_prompts() -> List[Tuple[str, str]]:
+    """Generate optimization prompts."""
+    prompts = [
+        ("Optimize hyperparameters using genetic algorithms", "Optimization"),
+        ("Find optimal solution using simulated annealing for complex problems", "Optimization"),
+        ("Optimize resource allocation using evolutionary algorithms", "Optimization"),
+        ("Solve combinatorial optimization problems using metaheuristics", "Optimization"),
+        ("Optimize model parameters using Bayesian optimization", "Optimization"),
+        ("Find optimal configuration using genetic programming", "Optimization"),
+        ("Optimize portfolio allocation using optimization algorithms", "Optimization"),
+        ("Solve routing problems using optimization techniques", "Optimization"),
+        ("Optimize scheduling using constraint optimization", "Optimization"),
+        ("Find optimal feature subset using optimization methods", "Optimization"),
+        ("Optimize system parameters using gradient-free optimization", "Optimization"),
+        ("Solve multi-objective optimization problems", "Optimization"),
+        ("Optimize neural network architecture using optimization algorithms", "Optimization"),
+        ("Find optimal thresholds using optimization techniques", "Optimization"),
+        ("Optimize model selection using automated optimization", "Optimization"),
+    ]
+    return prompts
+
+
+def generate_graph_algorithms_prompts() -> List[Tuple[str, str]]:
+    """Generate graph algorithms prompts."""
+    prompts = [
+        ("Analyze social networks using graph neural networks", "Graph Algorithms"),
+        ("Model relationships in knowledge graphs using GNN", "Graph Algorithms"),
+        ("Predict node properties in graph structures", "Graph Algorithms"),
+        ("Classify graphs using graph neural network architectures", "Graph Algorithms"),
+        ("Detect communities in social networks using graph algorithms", "Graph Algorithms"),
+        ("Predict links in knowledge graphs using graph embeddings", "Graph Algorithms"),
+        ("Model molecular structures using graph neural networks", "Graph Algorithms"),
+        ("Analyze citation networks using graph-based learning", "Graph Algorithms"),
+        ("Predict interactions in protein-protein interaction graphs", "Graph Algorithms"),
+        ("Model user-item relationships in recommendation graphs", "Graph Algorithms"),
+        ("Classify molecules using graph convolutional networks", "Graph Algorithms"),
+        ("Analyze traffic networks using graph neural networks", "Graph Algorithms"),
+        ("Predict node attributes in heterogeneous graphs", "Graph Algorithms"),
+        ("Model temporal graphs using dynamic graph neural networks", "Graph Algorithms"),
+        ("Analyze financial networks using graph-based approaches", "Graph Algorithms"),
+    ]
+    return prompts
+
+
+def generate_transfer_learning_prompts() -> List[Tuple[str, str]]:
+    """Generate transfer learning prompts."""
+    prompts = [
+        ("Fine-tune pretrained BERT model for domain-specific text classification", "Transfer Learning"),
+        ("Adapt pretrained image models using transfer learning for medical images", "Transfer Learning"),
+        ("Transfer knowledge from large model to small model for deployment", "Transfer Learning"),
+        ("Fine-tune pretrained language models for specific NLP tasks", "Transfer Learning"),
+        ("Use transfer learning to adapt models to new domains with limited data", "Transfer Learning"),
+        ("Fine-tune pretrained vision models for specialized image recognition", "Transfer Learning"),
+        ("Transfer learned features from source domain to target domain", "Transfer Learning"),
+        ("Adapt pretrained models using few-shot learning techniques", "Transfer Learning"),
+        ("Fine-tune transformer models for domain-specific applications", "Transfer Learning"),
+        ("Use transfer learning to improve performance on small datasets", "Transfer Learning"),
+        ("Adapt pretrained CNNs for new image classification tasks", "Transfer Learning"),
+        ("Transfer knowledge from general models to specialized domains", "Transfer Learning"),
+        ("Fine-tune pretrained models for low-resource language tasks", "Transfer Learning"),
+        ("Use transfer learning to adapt models across different modalities", "Transfer Learning"),
+        ("Fine-tune pretrained embeddings for domain-specific applications", "Transfer Learning"),
+    ]
+    return prompts
+
+
+def generate_generative_prompts() -> List[Tuple[str, str]]:
+    """Generate generative models prompts."""
+    prompts = [
+        ("Generate synthetic images using GAN for data augmentation", "Generative Models"),
+        ("Create new text content using generative language models", "Generative Models"),
+        ("Generate realistic images using diffusion models", "Generative Models"),
+        ("Create synthetic data using VAE for privacy-preserving datasets", "Generative Models"),
+        ("Generate new molecules using generative models for drug discovery", "Generative Models"),
+        ("Create art using generative adversarial networks", "Generative Models"),
+        ("Generate synthetic voices using generative audio models", "Generative Models"),
+        ("Create new music using generative models", "Generative Models"),
+        ("Generate realistic scenes using GAN for simulation", "Generative Models"),
+        ("Create synthetic patient data using generative models for research", "Generative Models"),
+        ("Generate code using generative programming models", "Generative Models"),
+        ("Create realistic video using generative video models", "Generative Models"),
+        ("Generate synthetic faces using StyleGAN for privacy", "Generative Models"),
+        ("Create new designs using generative design models", "Generative Models"),
+        ("Generate realistic data using diffusion probabilistic models", "Generative Models"),
+    ]
+    return prompts
+
+
+def generate_nlg_prompts() -> List[Tuple[str, str]]:
+    """Generate natural language generation prompts."""
+    prompts = [
+        ("Generate text summaries from long documents using NLG", "Natural Language Generation"),
+        ("Create product descriptions using natural language generation", "Natural Language Generation"),
+        ("Generate news articles from structured data using text generation", "Natural Language Generation"),
+        ("Create personalized email content using natural language generation", "Natural Language Generation"),
+        ("Generate reports from data using automated text generation", "Natural Language Generation"),
+        ("Create conversational responses using natural language generation", "Natural Language Generation"),
+        ("Generate captions for images using text generation models", "Natural Language Generation"),
+        ("Create content for chatbots using natural language generation", "Natural Language Generation"),
+        ("Generate explanations from structured data using NLG", "Natural Language Generation"),
+        ("Create marketing copy using natural language generation", "Natural Language Generation"),
+        ("Generate documentation from code using text generation", "Natural Language Generation"),
+        ("Create personalized content using natural language generation", "Natural Language Generation"),
+        ("Generate answers to questions using text generation models", "Natural Language Generation"),
+        ("Create stories from prompts using natural language generation", "Natural Language Generation"),
+        ("Generate translations using natural language generation", "Natural Language Generation"),
+    ]
+    return prompts
+
+
+def generate_feature_engineering_prompts() -> List[Tuple[str, str]]:
+    """Generate feature engineering prompts."""
+    prompts = [
+        ("Extract meaningful features from raw data using feature engineering", "Feature Engineering"),
+        ("Select most important features using feature selection techniques", "Feature Engineering"),
+        ("Create polynomial features from numerical data for better model performance", "Feature Engineering"),
+        ("Engineer time-based features from timestamp data", "Feature Engineering"),
+        ("Extract statistical features from time series data", "Feature Engineering"),
+        ("Create interaction features between categorical and numerical variables", "Feature Engineering"),
+        ("Select optimal feature subset using recursive feature elimination", "Feature Engineering"),
+        ("Engineer domain-specific features for improved predictions", "Feature Engineering"),
+        ("Extract text features using TF-IDF and n-grams", "Feature Engineering"),
+        ("Create lag features from sequential data", "Feature Engineering"),
+        ("Engineer frequency domain features from signal data", "Feature Engineering"),
+        ("Extract shape and texture features from images", "Feature Engineering"),
+        ("Select features using mutual information for classification", "Feature Engineering"),
+        ("Engineer aggregation features from transactional data", "Feature Engineering"),
+        ("Create embedding features from categorical variables", "Feature Engineering"),
+    ]
+    return prompts
+
+
+def generate_deep_learning_prompts() -> List[Tuple[str, str]]:
+    """Generate deep learning prompts."""
+    prompts = [
+        ("Build deep neural network for complex pattern recognition", "Deep Learning"),
+        ("Train multilayer perceptron for tabular data classification", "Deep Learning"),
+        ("Use deep learning for high-dimensional data processing", "Deep Learning"),
+        ("Apply deep neural networks for feature learning from raw data", "Deep Learning"),
+        ("Train DNN for regression with non-linear relationships", "Deep Learning"),
+        ("Build deep learning model for multi-task learning", "Deep Learning"),
+        ("Use deep neural networks for hierarchical feature extraction", "Deep Learning"),
+        ("Apply deep learning for automated feature discovery", "Deep Learning"),
+        ("Train deep model for complex decision boundaries", "Deep Learning"),
+        ("Use DNN for learning from large-scale datasets", "Deep Learning"),
+        ("Apply deep learning for end-to-end learning pipeline", "Deep Learning"),
+        ("Build deep neural network with multiple hidden layers", "Deep Learning"),
+        ("Train deep model for non-linear transformations", "Deep Learning"),
+        ("Use deep learning for learning complex data representations", "Deep Learning"),
+        ("Apply DNN for high-capacity model requirements", "Deep Learning"),
+    ]
+    return prompts
+
+
+def generate_cv_segmentation_prompts() -> List[Tuple[str, str]]:
+    """Generate computer vision segmentation prompts."""
+    prompts = [
+        ("Segment medical images into anatomical regions using semantic segmentation", "Computer Vision Segmentation"),
+        ("Perform instance segmentation to separate individual objects in images", "Computer Vision Segmentation"),
+        ("Segment road scenes into different classes using segmentation networks", "Computer Vision Segmentation"),
+        ("Perform pixel-level classification using semantic segmentation", "Computer Vision Segmentation"),
+        ("Segment cells in microscopic images using segmentation models", "Computer Vision Segmentation"),
+        ("Separate foreground from background using image segmentation", "Computer Vision Segmentation"),
+        ("Segment satellite images into land use classes", "Computer Vision Segmentation"),
+        ("Perform fine-grained segmentation of scenes into semantic regions", "Computer Vision Segmentation"),
+        ("Segment medical scans into tissue types using segmentation", "Computer Vision Segmentation"),
+        ("Separate overlapping objects using instance segmentation", "Computer Vision Segmentation"),
+        ("Segment video frames into semantic regions for analysis", "Computer Vision Segmentation"),
+        ("Perform pixel-wise classification using deep segmentation networks", "Computer Vision Segmentation"),
+        ("Segment agricultural fields in aerial images", "Computer Vision Segmentation"),
+        ("Separate different materials in images using segmentation", "Computer Vision Segmentation"),
+        ("Segment urban scenes into building, road, and vegetation classes", "Computer Vision Segmentation"),
+    ]
+    return prompts
+
+
+def generate_multimodal_prompts() -> List[Tuple[str, str]]:
+    """Generate multi-modal learning prompts."""
+    prompts = [
+        ("Combine text and image features for multi-modal classification", "Multi-modal Learning"),
+        ("Fuse audio and video features using multi-modal learning", "Multi-modal Learning"),
+        ("Integrate multiple data modalities for improved predictions", "Multi-modal Learning"),
+        ("Combine visual and textual information for content understanding", "Multi-modal Learning"),
+        ("Fuse sensor data from multiple sources using multi-modal approaches", "Multi-modal Learning"),
+        ("Integrate image and text embeddings for cross-modal retrieval", "Multi-modal Learning"),
+        ("Combine structured and unstructured data using multi-modal learning", "Multi-modal Learning"),
+        ("Fuse different data types for comprehensive analysis", "Multi-modal Learning"),
+        ("Integrate video and audio streams for multi-modal understanding", "Multi-modal Learning"),
+        ("Combine numerical and categorical features across modalities", "Multi-modal Learning"),
+        ("Fuse time series and image data for multi-modal forecasting", "Multi-modal Learning"),
+        ("Integrate graph and text data for multi-modal knowledge extraction", "Multi-modal Learning"),
+        ("Combine multiple sensor modalities for environmental monitoring", "Multi-modal Learning"),
+        ("Fuse text, images, and metadata for content recommendation", "Multi-modal Learning"),
+        ("Integrate different data sources using cross-modal learning", "Multi-modal Learning"),
+    ]
+    return prompts
+
+
+def generate_automl_prompts() -> List[Tuple[str, str]]:
+    """Generate AutoML prompts."""
+    prompts = [
+        ("Automate machine learning pipeline using AutoML", "AutoML"),
+        ("Automatically select best model using automated machine learning", "AutoML"),
+        ("Optimize hyperparameters automatically using AutoML frameworks", "AutoML"),
+        ("Automate feature engineering and model selection with AutoML", "AutoML"),
+        ("Use neural architecture search for automated model design", "AutoML"),
+        ("Automate end-to-end ML workflow using AutoML tools", "AutoML"),
+        ("Automatically tune model hyperparameters using AutoML", "AutoML"),
+        ("Use AutoML for rapid prototyping and model selection", "AutoML"),
+        ("Automate pipeline optimization using automated ML", "AutoML"),
+        ("Apply neural architecture search for optimal model architecture", "AutoML"),
+        ("Automate feature selection and engineering with AutoML", "AutoML"),
+        ("Use AutoML to automatically build and optimize models", "AutoML"),
+        ("Automate model training and evaluation using AutoML", "AutoML"),
+        ("Apply automated machine learning for quick model development", "AutoML"),
+        ("Use AutoML to automatically find best algorithms and parameters", "AutoML"),
+    ]
+    return prompts
+
+
 def generate_all_prompts() -> List[Tuple[str, str]]:
-    """Generate all 10000 prompts (deduplicated by text)."""
+    """Generate all 10000 prompts across all 25 algorithm type categories."""
     all_prompts = []
     all_prompts.extend(generate_classification_prompts())
     all_prompts.extend(generate_regression_prompts())
     all_prompts.extend(generate_clustering_prompts())
     all_prompts.extend(generate_time_series_prompts())
+    all_prompts.extend(generate_sequence_models_prompts())
     all_prompts.extend(generate_nlp_prompts())
     all_prompts.extend(generate_vision_prompts())
+    all_prompts.extend(generate_cv_detection_prompts())
     all_prompts.extend(generate_anomaly_prompts())
     all_prompts.extend(generate_recsys_prompts())
     all_prompts.extend(generate_rl_prompts())
     all_prompts.extend(generate_causal_prompts())
     all_prompts.extend(generate_dimred_prompts())
+    all_prompts.extend(generate_ensemble_prompts())
+    all_prompts.extend(generate_optimization_prompts())
+    all_prompts.extend(generate_graph_algorithms_prompts())
+    all_prompts.extend(generate_transfer_learning_prompts())
+    all_prompts.extend(generate_generative_prompts())
+    all_prompts.extend(generate_nlg_prompts())
+    all_prompts.extend(generate_feature_engineering_prompts())
+    all_prompts.extend(generate_deep_learning_prompts())
+    all_prompts.extend(generate_cv_segmentation_prompts())
+    all_prompts.extend(generate_multimodal_prompts())
+    all_prompts.extend(generate_automl_prompts())
     
     # Ensure we have exactly 10000 by expanding variations if needed
     target = 10000

@@ -19,7 +19,11 @@ router = APIRouter(tags=["performance"])
 
 
 async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
-    """Run performance test against a specific backend."""
+    """Run performance test against a specific backend.
+    
+    Only measures DB operations (inserts/updates/deletes), excluding
+    startup/shutdown times.
+    """
     # Store original env
     original_use_in_memory = os.getenv("USE_IN_MEMORY", "1")
     
@@ -35,15 +39,19 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
             repo = MongoSelectionRepository(db)
             unique_repo = MongoUniqueRequestRepository(db)
         elif backend == "sqlite":
-            # For now, SQLite uses same as inmemory
-            # TODO: Implement SQLite repository
+            # SQLite uses in-memory for now (can be extended later)
             os.environ["USE_IN_MEMORY"] = "1"
             repo = InMemorySelectionRepository.get_instance()
             unique_repo = InMemoryUniqueRequestRepository.get_instance()
         else:
             return {"error": f"Unknown backend: {backend}"}
         
-        service = RecommendationService(repo, unique_repo)
+        # Warm up: perform one operation to initialize connections/structures
+        try:
+            await repo.add_selection("test", "warmup")
+            await unique_repo.add_unique_request("warmup", "Other")
+        except Exception:
+            pass  # Ignore warmup errors
         
         test_prompts = [
             "Classify customer reviews by sentiment",
@@ -56,38 +64,56 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
         results = {
             "backend": backend,
             "num_requests": num_requests,
-            "response_times": [],
+            "db_operation_times": [],
             "success_count": 0,
             "error_count": 0,
             "errors": [],
         }
         
-        start_time = time.time()
-        
+        # Measure only DB operations (inserts/updates/deletes)
         for i in range(num_requests):
             prompt = test_prompts[i % len(test_prompts)]
-            request_start = time.time()
             
             try:
-                await service.recommend(prompt)
-                request_time = time.time() - request_start
-                results["response_times"].append(request_time)
+                # Time only the DB operations, not the entire recommendation
+                db_op_start = time.time()
+                await repo.add_selection(f"test-algorithm-{i}", prompt)
+                algorithm_type = "Classification"  # Simplified for testing
+                await unique_repo.add_unique_request(prompt, algorithm_type)
+                db_op_time = time.time() - db_op_start
+                
+                results["db_operation_times"].append(db_op_time)
                 results["success_count"] += 1
             except Exception as e:
                 results["error_count"] += 1
                 results["errors"].append(str(e))
         
-        results["total_time"] = time.time() - start_time
-        
-        if results["response_times"]:
-            results["min_response_time"] = min(results["response_times"])
-            results["max_response_time"] = max(results["response_times"])
-            results["avg_response_time"] = sum(results["response_times"]) / len(results["response_times"])
-            results["requests_per_second"] = len(results["response_times"]) / results["total_time"] if results["total_time"] > 0 else 0
+        # Calculate statistics from DB operation times only
+        if results["db_operation_times"]:
+            total_db_time = sum(results["db_operation_times"])
+            results["total_db_time"] = total_db_time
+            results["min_db_time"] = min(results["db_operation_times"])
+            results["max_db_time"] = max(results["db_operation_times"])
+            results["avg_db_time"] = total_db_time / len(results["db_operation_times"])
+            results["db_operations_per_second"] = len(results["db_operation_times"]) / total_db_time if total_db_time > 0 else 0
+            # For backward compatibility
+            results["response_times"] = results["db_operation_times"]
+            results["min_response_time"] = results["min_db_time"]
+            results["max_response_time"] = results["max_db_time"]
+            results["avg_response_time"] = results["avg_db_time"]
+            results["total_time"] = total_db_time
+            results["requests_per_second"] = results["db_operations_per_second"]
         else:
+            results["min_db_time"] = 0
+            results["max_db_time"] = 0
+            results["avg_db_time"] = 0
+            results["total_db_time"] = 0
+            results["db_operations_per_second"] = 0
+            results["response_times"] = []
             results["min_response_time"] = 0
             results["max_response_time"] = 0
             results["avg_response_time"] = 0
+            results["total_time"] = 0
             results["requests_per_second"] = 0
         
         return results

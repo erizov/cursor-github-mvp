@@ -1,0 +1,32 @@
+# SQLite Backend Dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# System deps (optional: for building some wheels)
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps (add aiosqlite for async SQLite support)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt aiosqlite
+
+# Copy application
+COPY backend/ ./backend/
+COPY ai_algorithm_teacher.py ./
+
+# Set environment for SQLite backend
+ENV USE_IN_MEMORY=0
+ENV USE_SQLITE=1
+ENV SQLITE_DB_PATH=/app/data/ai_algo_teacher.db
+
+# Create data directory for SQLite database
+RUN mkdir -p /app/data
+
+# Expose API
+EXPOSE 8000
+
+# Default command
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
