@@ -30,7 +30,29 @@ def _html_page(title: str, body: str) -> str:
       ul {{ padding-left: 1.2rem; }}
       .small {{ color: #666; font-size: 0.9rem; }}
       .pill {{ display:inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; background:#eef; color:#225; font-size:0.8rem; margin-left:0.5rem; }}
+      pre {{ white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto; }}
     </style>
+    <script>
+      async function executePost(endpoint, resultId) {{
+        const resultDiv = document.getElementById(resultId);
+        resultDiv.style.display = 'block';
+        resultDiv.innerHTML = '<em>Executing...</em>';
+        
+        try {{
+          const response = await fetch(endpoint, {{
+            method: 'POST',
+            headers: {{
+              'Content-Type': 'application/json',
+            }},
+          }});
+          
+          const data = await response.json();
+          resultDiv.innerHTML = '<strong>Response (' + response.status + '):</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        }} catch (error) {{
+          resultDiv.innerHTML = '<strong style="color: red;">Error:</strong><pre>' + error.message + '</pre>';
+        }}
+      }}
+    </script>
   </head>
   <body>
     {body}
@@ -243,12 +265,27 @@ async def api_index(request: Request) -> HTMLResponse:
     
     groups_html = ""
     for group in endpoint_groups:
-        endpoints_html = "\n".join(
-            f'        <li><a href="{ep["path"]}"><code>{ep["method"]} {ep["path"]}</code></a> '
-            f'<span class="pill">{ep["method"]}</span><br>'
-            f'        <span class="small" style="margin-left: 1.5rem; display: block; margin-top: 0.2rem;">{ep["description"]}</span></li>'
-            for ep in group["endpoints"]
-        )
+        endpoints_html = ""
+        for ep in group["endpoints"]:
+            if ep["method"] == "POST":
+                # For POST endpoints, create a button that uses JavaScript fetch
+                endpoint_id = ep["path"].replace("/", "_").replace("-", "_").replace(".", "_")
+                endpoints_html += f'''
+        <li>
+          <code>{ep["method"]} {ep["path"]}</code>
+          <span class="pill">{ep["method"]}</span>
+          <button onclick="executePost('{ep["path"]}', 'endpoint_{endpoint_id}_result')" 
+                  style="margin-left: 0.5rem; padding: 0.25rem 0.75rem; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-size: 0.85rem;">Execute</button>
+          <div id="endpoint_{endpoint_id}_result" style="margin-top: 0.5rem; margin-left: 1.5rem; padding: 0.5rem; background: #f6f8fa; border-radius: 4px; display: none;"></div>
+          <br>
+          <span class="small" style="margin-left: 1.5rem; display: block; margin-top: 0.2rem;">{ep["description"]}</span>
+        </li>'''
+            else:
+                # For GET endpoints, use regular links
+                endpoints_html += f'''
+        <li><a href="{ep["path"]}"><code>{ep["method"]} {ep["path"]}</code></a>
+            <span class="pill">{ep["method"]}</span><br>
+            <span class="small" style="margin-left: 1.5rem; display: block; margin-top: 0.2rem;">{ep["description"]}</span></li>'''
         groups_html += f"""
       <h2>{group["title"]}</h2>
       <ul>
