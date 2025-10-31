@@ -1,14 +1,22 @@
 import subprocess
 import time
 import requests
+from datetime import datetime
 from pathlib import Path
+
+
+def get_image_name(tag: str = "") -> str:
+    """Generate timestamped image name: alg-teach-yyyymmdd-hhmmss"""
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    return f"alg-teach-{timestamp}"
 
 
 def test_docker_build():
     """Test that Docker image builds successfully."""
     project_root = Path(__file__).resolve().parents[1]
+    image_name = get_image_name()
     result = subprocess.run(
-        ["docker", "build", "-t", "algorithm-teacher:test", "."],
+        ["docker", "build", "-t", image_name, "."],
         cwd=str(project_root),
         capture_output=True,
         text=True,
@@ -20,17 +28,18 @@ def test_docker_build():
     # Docker Desktop outputs to stderr, traditional Docker outputs to stdout
     output = result.stdout + result.stderr
     assert ("Successfully tagged" in output or 
-            "naming to docker.io/library/algorithm-teacher:test" in output or
-            "algorithm-teacher:test" in output)
+            f"naming to docker.io/library/{image_name}" in output or
+            image_name in output)
 
 
 def test_docker_run():
     """Test that Docker container runs and responds to requests."""
     project_root = Path(__file__).resolve().parents[1]
+    image_name = get_image_name()
     
     # Build first
     build_result = subprocess.run(
-        ["docker", "build", "-t", "algorithm-teacher:test", "."],
+        ["docker", "build", "-t", image_name, "."],
         cwd=str(project_root),
         capture_output=True,
         text=True,
@@ -52,7 +61,7 @@ def test_docker_run():
                 container_name,
                 "-p",
                 "8001:8000",
-                "algorithm-teacher:test",
+                image_name,
             ],
             capture_output=True,
             text=True,
@@ -175,8 +184,9 @@ def test_docker_api_endpoints():
         time.sleep(3)
         
         # Build and run app container
+        image_name = get_image_name()
         subprocess.run(
-            ["docker", "build", "-t", "algorithm-teacher:test", "."],
+            ["docker", "build", "-t", image_name, "."],
             cwd=str(project_root),
             capture_output=True,
             encoding="utf-8",
@@ -195,10 +205,12 @@ def test_docker_api_endpoints():
                 "-p",
                 f"{port}:8000",
                 "-e",
+                "USE_IN_MEMORY=0",
+                "-e",
                 f"MONGODB_URI=mongodb://{mongo_container}:27017",
                 "-e",
                 "MONGODB_DB=test_db",
-                "algorithm-teacher:test",
+                image_name,
             ],
             capture_output=True,
             encoding="utf-8",
@@ -326,8 +338,9 @@ def test_docker_e2e_full_workflow():
         
         # Build Docker image
         print("Building Docker image...")
+        image_name = get_image_name()
         build_result = subprocess.run(
-            ["docker", "build", "-t", "algorithm-teacher:e2e", "."],
+            ["docker", "build", "-t", image_name, "."],
             cwd=str(project_root),
             capture_output=True,
             text=True,
@@ -339,8 +352,8 @@ def test_docker_e2e_full_workflow():
         # Docker Desktop outputs to stderr, traditional Docker outputs to stdout
         output = build_result.stdout + build_result.stderr
         assert ("Successfully tagged" in output or 
-                "naming to docker.io/library/algorithm-teacher:e2e" in output or
-                "algorithm-teacher:e2e" in output)
+                f"naming to docker.io/library/{image_name}" in output or
+                image_name in output)
         
         # Create Docker network
         network_result = subprocess.run(
@@ -422,10 +435,12 @@ def test_docker_e2e_full_workflow():
                 "-p",
                 f"{port}:8000",
                 "-e",
+                "USE_IN_MEMORY=0",
+                "-e",
                 f"MONGODB_URI=mongodb://{mongo_container}:27017",
                 "-e",
                 "MONGODB_DB=test_db",
-                "algorithm-teacher:e2e",
+                image_name,
             ],
             capture_output=True,
             text=True,

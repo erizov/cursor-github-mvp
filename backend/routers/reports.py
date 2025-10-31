@@ -1,7 +1,7 @@
 import os
 
-from fastapi import APIRouter, Depends
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import HTMLResponse, JSONResponse
 from backend.models import (
     UsageReportResponse,
     UsageCount,
@@ -223,6 +223,123 @@ async def details(repo: MongoSelectionRepository = Depends(get_repo)) -> Detaile
     ]
     groups.sort(key=lambda g: (-g.count, g.algorithm))
     return DetailedReportResponse(total=total, groups=groups)
+
+
+@router.get("/reports", response_class=HTMLResponse)
+async def reports_index(request: Request) -> HTMLResponse:
+    """Index page listing all available reports and monitoring endpoints."""
+    from fastapi.responses import HTMLResponse as HTMLResp
+    
+    html = """
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Reports & Monitoring</title>
+        <style>
+          body { font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; line-height: 1.6; }
+          h1, h2 { margin-top: 1.2rem; }
+          code, pre { background: #f6f8fa; padding: 0.2rem 0.4rem; border-radius: 4px; }
+          ul { padding-left: 1.2rem; }
+          .section { margin: 2rem 0; padding: 1rem; background: #f9fafb; border-radius: 8px; }
+          .endpoint { margin: 0.5rem 0; padding: 0.5rem; background: white; border-left: 3px solid #0366d6; }
+          .method { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: 600; margin-right: 0.5rem; }
+          .get { background: #28a745; color: white; }
+          .post { background: #007bff; color: white; }
+          a { color: #0366d6; text-decoration: none; }
+          a:hover { text-decoration: underline; }
+        </style>
+      </head>
+      <body>
+        <h1>Reports & Monitoring</h1>
+        <p>All available endpoints for reports and monitoring.</p>
+        
+        <div class="section">
+          <h2>Usage Reports</h2>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/api/reports/usage">/api/reports/usage</a>
+            <p>JSON format: Returns total usage count and per-algorithm statistics.</p>
+          </div>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/api/reports/usage.html">/api/reports/usage.html</a>
+            <p>HTML format: Visual chart with colored bars showing algorithm usage.</p>
+          </div>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/api/reports/details">/api/reports/details</a>
+            <p>JSON format: Detailed report grouped by algorithm with prompts and timestamps.</p>
+          </div>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/api/reports/details.html">/api/reports/details.html</a>
+            <p>HTML format: Detailed view with prompts, timestamps, and groupings.</p>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>Monitoring</h2>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/metrics">/metrics</a>
+            <p>Prometheus metrics in plain text format (Prometheus scrape endpoint).</p>
+          </div>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/metrics.html">/metrics.html</a>
+            <p>Prometheus metrics rendered as HTML table for human-readable viewing.</p>
+          </div>
+          <div class="endpoint">
+            <span class="method get">GET</span>
+            <a href="/api/monitoring">/api/monitoring</a>
+            <p>Monitoring endpoints index (JSON format).</p>
+          </div>
+        </div>
+        
+        <div class="section">
+          <h2>Quick Links</h2>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/api">API Index</a></li>
+            <li><a href="/docs">Swagger UI</a></li>
+            <li><a href="/index.json">All Endpoints (JSON)</a></li>
+          </ul>
+        </div>
+      </body>
+    </html>
+    """
+    return HTMLResp(content=html)
+
+
+@router.get("/reports/index.json")
+async def reports_index_json() -> JSONResponse:
+    """JSON index of all reports and monitoring endpoints."""
+    return JSONResponse(
+        {
+            "reports": {
+                "usage": {
+                    "json": "/api/reports/usage",
+                    "html": "/api/reports/usage.html",
+                    "description": "Algorithm usage statistics and counts",
+                },
+                "details": {
+                    "json": "/api/reports/details",
+                    "html": "/api/reports/details.html",
+                    "description": "Detailed report with prompts and timestamps grouped by algorithm",
+                },
+            },
+            "monitoring": {
+                "prometheus": {
+                    "text": "/metrics",
+                    "html": "/metrics.html",
+                    "json": "/api/monitoring",
+                    "description": "Prometheus metrics endpoint",
+                },
+            },
+        }
+    )
 
 
 @router.get("/reports/details.html", response_class=HTMLResponse)
