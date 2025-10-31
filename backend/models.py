@@ -55,3 +55,9 @@ class DetailedReportResponse(BaseModel):
     groups: List[AlgorithmGroup]
 
 
+class UserRequest(BaseModel):
+    prompt: str
+    algorithm_type: str
+    created_at: datetime
+
+

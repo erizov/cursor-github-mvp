@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from backend.models import RecommendRequest, RecommendResponse
-from backend.repositories import MongoSelectionRepository
+from backend.repositories import MongoSelectionRepository, MongoUniqueRequestRepository
 from backend.services import RecommendationService
 from backend.db import get_db
 from backend.monitoring import RECOMMENDATIONS_TOTAL
@@ -13,7 +13,8 @@ router = APIRouter(tags=["recommendations"])
 async def get_service():
     db = get_db()
     repo = MongoSelectionRepository(db)
-    return RecommendationService(repo)
+    unique_repo = MongoUniqueRequestRepository(db)
+    return RecommendationService(repo, unique_repo)
 
 
 @router.post("/recommend", response_model=RecommendResponse)
