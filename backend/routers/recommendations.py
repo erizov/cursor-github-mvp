@@ -1,6 +1,13 @@
+import os
+
 from fastapi import APIRouter, Depends
 from backend.models import RecommendRequest, RecommendResponse
-from backend.repositories import MongoSelectionRepository, MongoUniqueRequestRepository
+from backend.repositories import (
+    MongoSelectionRepository,
+    MongoUniqueRequestRepository,
+    InMemorySelectionRepository,
+    InMemoryUniqueRequestRepository,
+)
 from backend.services import RecommendationService
 from backend.db import get_db
 from backend.monitoring import RECOMMENDATIONS_TOTAL
@@ -11,6 +18,11 @@ router = APIRouter(tags=["recommendations"])
 
 
 async def get_service():
+    use_in_memory = os.getenv("USE_IN_MEMORY", "1") == "1"
+    if use_in_memory:
+        repo = InMemorySelectionRepository()
+        unique_repo = InMemoryUniqueRequestRepository()
+        return RecommendationService(repo, unique_repo)
     db = get_db()
     repo = MongoSelectionRepository(db)
     unique_repo = MongoUniqueRequestRepository(db)
