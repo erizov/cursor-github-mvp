@@ -9,8 +9,10 @@ Env:
 """
 
 import os
+import sys
 from pathlib import Path
 import redis
+from redis.exceptions import ConnectionError as RedisConnectionError
 
 ROOT = Path(__file__).resolve().parents[1]
 PROMPTS_FILE = ROOT / "prompts.txt"
@@ -18,7 +20,25 @@ PROMPTS_FILE = ROOT / "prompts.txt"
 
 def main() -> None:
     url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
-    r = redis.from_url(url)
+    try:
+        r = redis.from_url(url)
+        # Test connection
+        r.ping()
+    except RedisConnectionError as e:
+        print(
+            f"Error: Cannot connect to Redis at {url}\n"
+            f"Please ensure Redis is running and accessible.\n"
+            f"Details: {e}",
+            file=sys.stderr
+        )
+        sys.exit(1)
+    except Exception as e:
+        print(
+            f"Error connecting to Redis: {e}",
+            file=sys.stderr
+        )
+        sys.exit(1)
+    
     # Clear existing
     r.delete("prompts:list")
     r.delete("prompts:hash")
