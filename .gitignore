@@ -191,3 +191,6 @@ Thumbs.db
 # Office documents
 *.docx
 ~$*.docx
+
+# Archives
+*.zip
