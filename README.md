@@ -41,18 +41,29 @@ curl -X POST http://localhost:8000/api/recommend \
 - `GET /metrics` - Prometheus metrics (plain text)
 - `GET /metrics.html` - Prometheus metrics (HTML table)
 
-### Tests
+### Test Endpoints
+
+Endpoints to start and run tests:
+
 - `GET /api/tests` - Test endpoints index (JSON)
-- `POST /api/tests/run` - Run all tests
-- `GET /api/tests/run` - Run all tests (GET method)
-- `POST /api/tests/unit` - Run unit tests only
-- `GET /api/tests/unit` - Run unit tests (GET method)
-- `POST /api/tests/pipeline` - Run e2e pipeline test
-- `GET /api/tests/pipeline` - Run pipeline test (GET method)
+- `POST /api/tests/run` - Run all tests (pytest -q tests/)
+- `POST /api/tests/unit` - Run unit tests only (excludes Docker and e2e)
+- `POST /api/tests/pipeline` - Run e2e pipeline test (builds Docker, runs container, verifies endpoints)
+
+**Example:**
+```bash
+# Run all tests
+curl -X POST http://localhost:8000/api/tests/run
+
+# Run unit tests only
+curl -X POST http://localhost:8000/api/tests/unit
+
+# Run pipeline test
+curl -X POST http://localhost:8000/api/tests/pipeline
+```
 
 ### Cleanup
-- `POST /api/cleanup/images?age_minutes=30` - Clean up old Docker images
-- `GET /api/cleanup/images?age_minutes=30` - Clean up images (GET method)
+- `POST /api/cleanup/images?age_minutes=30` - Clean up old Docker images older than specified minutes (default: 30)
 
 ### Documentation
 - `GET /` - Home page with endpoint listing

@@ -128,9 +128,9 @@ async def api_index(request: Request) -> HTMLResponse:
             _link("/metrics", "GET /metrics", "Prometheus"),
             _link("/metrics.html", "GET /metrics.html", "Prometheus HTML"),
             _link("/api/tests", "GET /api/tests", "Tests Index"),
-            _link("/api/tests/run", "POST /api/tests/run", "All Tests"),
-            _link("/api/tests/unit", "POST /api/tests/unit", "Unit Tests"),
-            _link("/api/tests/pipeline", "POST /api/tests/pipeline", "Pipeline Test"),
+            _link("/api/tests/run", "POST /api/tests/run", "Run All Tests"),
+            _link("/api/tests/unit", "POST /api/tests/unit", "Run Unit Tests"),
+            _link("/api/tests/pipeline", "POST /api/tests/pipeline", "Run Pipeline Test"),
             _link("/api/cleanup/images", "POST /api/cleanup/images", "Cleanup Old Images"),
             _link("/docs", "Swagger UI"),
             _link("/redoc", "ReDoc"),
@@ -203,10 +203,6 @@ async def run_tests(scope: Optional[str] = None) -> JSONResponse:
         )
 
 
-# Allow GET for convenience (runs full suite by default)
-@router.get("/api/tests/run")
-async def run_tests_get() -> JSONResponse:
-    return await run_tests(scope=None)
 
 
 @router.post("/api/tests/unit")
@@ -246,10 +242,6 @@ async def run_unit_tests() -> JSONResponse:
         )
 
 
-@router.get("/api/tests/unit")
-async def run_unit_tests_get() -> JSONResponse:
-    """Run unit tests (GET convenience method)."""
-    return await run_unit_tests()
 
 
 @router.post("/api/tests/pipeline")
@@ -306,10 +298,6 @@ async def run_pipeline_test() -> JSONResponse:
         )
 
 
-@router.get("/api/tests/pipeline")
-async def run_pipeline_test_get() -> JSONResponse:
-    """Run pipeline test (GET convenience method)."""
-    return await run_pipeline_test()
 
 
 @router.post("/api/cleanup/images")
@@ -355,10 +343,6 @@ async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 30) -> JSONRe
         )
 
 
-@router.get("/api/cleanup/images")
-async def cleanup_old_images_get(age_minutes: Optional[int] = 30) -> JSONResponse:
-    """Clean up old images (GET convenience method)."""
-    return await cleanup_old_images_endpoint(age_minutes=age_minutes)
 
 # Serve frontend assets: /index.html and /styles.css
 
@@ -386,7 +370,7 @@ async def tests_index() -> JSONResponse:
             "tests": {
                 "all": {
                     "endpoint": "/api/tests/run",
-                    "methods": ["GET", "POST"],
+                    "method": "POST",
                     "description": "Run all tests (default: pytest -q tests/)",
                     "params": {
                         "scope": "Optional test path (e.g., 'tests/test_e2e.py')",
@@ -394,13 +378,13 @@ async def tests_index() -> JSONResponse:
                 },
                 "unit": {
                     "endpoint": "/api/tests/unit",
-                    "methods": ["GET", "POST"],
+                    "method": "POST",
                     "description": "Run unit tests only (excludes Docker and e2e)",
                     "command": "pytest -q -k 'not docker and not e2e' tests/",
                 },
                 "pipeline": {
                     "endpoint": "/api/tests/pipeline",
-                    "methods": ["GET", "POST"],
+                    "method": "POST",
                     "description": "Run e2e pipeline test (builds Docker, runs container, verifies endpoints)",
                     "script": "e2e/pipeline.ps1",
                 },

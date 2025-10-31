@@ -23,16 +23,67 @@ def get_image_creation_time(image_id: str) -> Optional[datetime]:
             text=True,
             timeout=10,
         )
-        if result.returncode == 0:
-            created_str = result.stdout.strip()
-            # Parse ISO 8601 format
+        if result.returncode != 0:
+            return None
+        
+        created_str = result.stdout.strip()
+        if not created_str:
+            return None
+        
+        # Try multiple parsing strategies
+        # Format 1: ISO 8601 with timezone (e.g., "2024-01-15T12:00:00.123456789Z")
+        # Format 2: ISO 8601 without timezone (e.g., "2024-01-15T12:00:00.123456789")
+        
+        # Remove nanoseconds if present (keep microseconds)
+        if "." in created_str:
+            parts = created_str.split(".")
+            if len(parts) > 1:
+                # Keep only up to microseconds
+                microseconds = parts[1][:6].rstrip("Z").rstrip("+00:00").rstrip(" ")
+                created_str = f"{parts[0]}.{microseconds}"
+            else:
+                created_str = parts[0]
+        
+        # Handle timezone indicators
+        if created_str.endswith("Z"):
+            created_str = created_str[:-1] + "+00:00"
+        elif "+" not in created_str and "-" in created_str[-6:]:
+            # Might have timezone offset like "-05:00"
+            pass
+        elif "+" not in created_str and "T" in created_str:
+            # No timezone, assume UTC
+            if not created_str.endswith("+00:00"):
+                created_str += "+00:00"
+        
+        # Try parsing with timezone first
+        try:
+            dt = datetime.fromisoformat(created_str)
+            # Make timezone-aware if it isn't
+            if dt.tzinfo is None:
+                from datetime import timezone
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt
+        except ValueError:
+            # Try without timezone
             try:
-                return datetime.fromisoformat(created_str.replace("Z", "+00:00").replace(" +0000", ""))
+                dt = datetime.fromisoformat(created_str.replace("+00:00", "").rstrip("Z"))
+                from datetime import timezone
+                return dt.replace(tzinfo=timezone.utc)
             except ValueError:
-                # Try alternative parsing
-                return datetime.fromisoformat(created_str.split(".")[0])
-    except Exception:
-        pass
+                # Try parsing with dateutil if available
+                try:
+                    from dateutil import parser as date_parser
+                    return date_parser.parse(created_str)
+                except ImportError:
+                    # Last resort: try parsing common formats
+                    for fmt in ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]:
+                        try:
+                            return datetime.strptime(created_str.split(".")[0].split("+")[0].split("-")[0], fmt)
+                        except ValueError:
+                            continue
+    except Exception as e:
+        print(f"Error parsing creation time for {image_id}: {e}", file=sys.stderr)
+    
     return None
 
 
@@ -69,7 +120,9 @@ def list_alg_teach_images() -> List[Dict[str, str]]:
 
 def cleanup_old_images(age_minutes: int = 30, dry_run: bool = False) -> int:
     """Remove Docker images older than specified age."""
-    cutoff_time = datetime.now() - timedelta(minutes=age_minutes)
+    from datetime import timezone
+    now = datetime.now(timezone.utc)
+    cutoff_time = now - timedelta(minutes=age_minutes)
     images = list_alg_teach_images()
     removed_count = 0
     
@@ -83,14 +136,18 @@ def cleanup_old_images(age_minutes: int = 30, dry_run: bool = False) -> int:
             print(f"  Skipping {img['repository']}:{img['tag']} (cannot determine age)")
             continue
         
-        # Make timezone-naive for comparison
-        if created.tzinfo:
-            created = created.replace(tzinfo=None)
+        # Ensure both datetimes are timezone-aware for comparison
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        if cutoff_time.tzinfo is None:
+            cutoff_time = cutoff_time.replace(tzinfo=timezone.utc)
         
         if created < cutoff_time:
-            age_str = str(datetime.now() - created).split(".")[0]
+            age_delta = now - created
+            age_str = str(age_delta).split(".")[0]
             if dry_run:
                 print(f"  [DRY RUN] Would remove {img['repository']}:{img['tag']} (age: {age_str})")
+                removed_count += 1
             else:
                 print(f"  Removing {img['repository']}:{img['tag']} (age: {age_str})")
                 result = subprocess.run(
@@ -104,7 +161,8 @@ def cleanup_old_images(age_minutes: int = 30, dry_run: bool = False) -> int:
                 else:
                     print(f"    Warning: Failed to remove {img['repository']}: {result.stderr}")
         else:
-            age_str = str(datetime.now() - created).split(".")[0]
+            age_delta = now - created
+            age_str = str(age_delta).split(".")[0]
             print(f"  Keeping {img['repository']}:{img['tag']} (age: {age_str})")
     
     return removed_count
