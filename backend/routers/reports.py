@@ -1,3 +1,5 @@
+import os
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import HTMLResponse
 from backend.models import (
@@ -7,7 +9,7 @@ from backend.models import (
     AlgorithmGroup,
     SelectionDetail,
 )
-from backend.repositories import MongoSelectionRepository
+from backend.repositories import MongoSelectionRepository, InMemorySelectionRepository
 from backend.db import get_db
 
 
@@ -15,6 +17,9 @@ router = APIRouter(tags=["reports"])
 
 
 async def get_repo():
+    use_in_memory = os.getenv("USE_IN_MEMORY", "1") == "1"
+    if use_in_memory:
+        return InMemorySelectionRepository()
     db = get_db()
     return MongoSelectionRepository(db)
 
