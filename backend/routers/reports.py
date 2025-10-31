@@ -200,9 +200,9 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <select id="seedCount" style="padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.875rem; cursor: pointer;">
               <option value="10">10 prompts</option>
               <option value="50">50 prompts</option>
-              <option value="100">100 prompts</option>
+              <option value="100" selected>100 prompts</option>
               <option value="500">500 prompts</option>
-              <option value="1000" selected>1,000 prompts</option>
+              <option value="1000">1,000 prompts</option>
             </select>
             <button onclick="seedDemoData()" id="seedBtn" style="margin-left: 8px; padding: 8px 16px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; font-family: 'Inter', sans-serif;">🌱 Seed Demo Data</button>
           </div>
