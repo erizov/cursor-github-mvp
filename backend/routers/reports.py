@@ -19,6 +19,26 @@ async def get_repo():
     return MongoSelectionRepository(db)
 
 
+def _get_empty_state_html() -> str:
+    """Return HTML for empty state message."""
+    return (
+        '<div class="empty">'
+        '<strong>No data yet</strong><span class="pill">getting started</span>'
+        '<div>Make a few recommendation requests, then refresh this page.</div>'
+        '<ul>'
+        '<li>POST <code>/api/recommend</code> with a JSON body like '
+        '<code>{"prompt": "Classify customer reviews"}</code></li>'
+        '<li>Or run tests: <code>POST /api/tests/run?scope=tests/test_e2e.py</code></li>'
+        '</ul>'
+        '</div>'
+    )
+
+
+def _get_empty_details_html() -> str:
+    """Return HTML for empty details report."""
+    return '<div class="empty">No selections yet. Make some requests to /api/recommend or run the test suite.</div>'
+
+
 def _normalize_key(name: str) -> str:
     # Collapse variants like "Anomaly Detection (Isolation Forest/One-Class SVM)" -> "anomaly detection"
     # Normalize whitespace and case for stable grouping
@@ -155,16 +175,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
           <h1>Usage Report</h1>
           <div class="sub">Total selections across recommendations</div>
           <div class="statbox"><div class="label">Total</div><div class="value">{total}</div></div>
-          {"" if total else """
-          <div class=\"empty\">
-            <strong>No data yet</strong><span class=\"pill\">getting started</span>
-            <div>Make a few recommendation requests, then refresh this page.</div>
-            <ul>
-              <li>POST <code>/api/recommend</code> with a JSON body like <code>{'{"prompt": "Classify customer reviews"}'}</code></li>
-              <li>Or run tests: <code>POST /api/tests/run?scope=tests/test_e2e.py</code></li>
-            </ul>
-          </div>
-          """}
+          {_get_empty_state_html() if not total else ""}
           <table>
             <thead>
               <tr><th>Algorithm</th><th>Count</th><th>Percent</th><th>Share</th></tr>
@@ -268,7 +279,7 @@ async def details_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HT
           <div class=\"nav\"><a href=\"/\">Home</a><a href=\"/api\">API</a><a href=\"/docs\">Docs</a></div>
           <h1>Detailed Report</h1>
           <div class=\"sub\">Grouped by algorithm (desc). Total: {total}</div>
-          {(''.join(sections)) if total else '<div class=\"empty\">No selections yet. Make some requests to /api/recommend or run the test suite.</div>'}
+          {''.join(sections) if total else _get_empty_details_html()}
         </div>
       </body>
     </html>
