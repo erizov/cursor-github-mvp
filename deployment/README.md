@@ -1,4 +1,4 @@
-# Docker folder
+# Deployment folder
 
 This directory contains Dockerfiles and helper scripts for building and running
 AI Algorithm Teacher.
@@ -14,10 +14,10 @@ AI Algorithm Teacher.
 
 ```bash
 # Prod image
-docker build -f docker/Dockerfile -t algorithm-teacher:prod .
+docker build -f deployment/Dockerfile -t algorithm-teacher:prod .
 
 # Dev image
-docker build -f docker/Dockerfile.dev -t algorithm-teacher:dev .
+docker build -f deployment/Dockerfile.dev -t algorithm-teacher:dev .
 ```
 
 ## Run
