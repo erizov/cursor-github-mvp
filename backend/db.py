@@ -17,7 +17,12 @@ def get_db_name() -> str:
 def get_client() -> AsyncIOMotorClient:
     global _client
     if _client is None:
-        _client = AsyncIOMotorClient(get_mongo_uri())
+        _client = AsyncIOMotorClient(
+            get_mongo_uri(),
+            serverSelectionTimeoutMS=2000,
+            connectTimeoutMS=2000,
+            socketTimeoutMS=5000,
+        )
     return _client
 
 
