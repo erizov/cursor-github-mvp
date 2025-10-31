@@ -131,6 +131,7 @@ async def api_index(request: Request) -> HTMLResponse:
             _link("/api/tests/run", "POST /api/tests/run", "All Tests"),
             _link("/api/tests/unit", "POST /api/tests/unit", "Unit Tests"),
             _link("/api/tests/pipeline", "POST /api/tests/pipeline", "Pipeline Test"),
+            _link("/api/cleanup/images", "POST /api/cleanup/images", "Cleanup Old Images"),
             _link("/docs", "Swagger UI"),
             _link("/redoc", "ReDoc"),
             _link("/readme", "Project README"),
@@ -309,6 +310,55 @@ async def run_pipeline_test() -> JSONResponse:
 async def run_pipeline_test_get() -> JSONResponse:
     """Run pipeline test (GET convenience method)."""
     return await run_pipeline_test()
+
+
+@router.post("/api/cleanup/images")
+async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 30) -> JSONResponse:
+    """Clean up old Docker images matching alg-teach-* pattern."""
+    project_root = Path(__file__).resolve().parents[2]
+    cleanup_script = project_root / "scripts" / "cleanup_old_images.py"
+    
+    if not cleanup_script.exists():
+        return JSONResponse(
+            {"error": f"Cleanup script not found: {cleanup_script}"},
+            status_code=404,
+        )
+    
+    cmd = [sys.executable, str(cleanup_script), "--age-minutes", str(age_minutes)]
+    try:
+        proc = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            cwd=str(project_root),
+            timeout=300,
+        )
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+                "age_minutes": age_minutes,
+            }
+        )
+    except subprocess.TimeoutExpired as exc:
+        return JSONResponse(
+            {
+                "command": " ".join(cmd),
+                "error": "timeout",
+                "stdout": exc.stdout or "",
+                "stderr": exc.stderr or "",
+                "age_minutes": age_minutes,
+            },
+            status_code=504,
+        )
+
+
+@router.get("/api/cleanup/images")
+async def cleanup_old_images_get(age_minutes: Optional[int] = 30) -> JSONResponse:
+    """Clean up old images (GET convenience method)."""
+    return await cleanup_old_images_endpoint(age_minutes=age_minutes)
 
 # Serve frontend assets: /index.html and /styles.css
 

@@ -6,20 +6,60 @@ keeps the surface area minimal.
 
 ## Quickstart
 
-```
+### Start FastAPI Server
+
+```bash
 python -m pip install -r requirements.txt
-uvicorn backend.app:app --reload
+uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Try a recommendation:
+Server will be available at: http://localhost:8000
 
-```
+### Try a Recommendation
+
+```bash
 curl -X POST http://localhost:8000/api/recommend \
   -H "Content-Type: application/json" \
   -d '{"prompt":"Classify reviews by sentiment"}'
 ```
 
-Open usage chart (HTML): http://localhost:8000/api/reports/usage.html
+## API Endpoints
+
+### Recommendations
+- `POST /api/recommend` - Get algorithm recommendations for a prompt
+
+### Reports
+- `GET /api/reports` - Reports and monitoring index (HTML)
+- `GET /api/reports/index.json` - Reports index (JSON)
+- `GET /api/reports/usage` - Usage statistics (JSON)
+- `GET /api/reports/usage.html` - Usage chart (HTML)
+- `GET /api/reports/details` - Detailed report by algorithm (JSON)
+- `GET /api/reports/details.html` - Detailed report (HTML)
+
+### Monitoring
+- `GET /api/monitoring` - Monitoring endpoints index (JSON)
+- `GET /metrics` - Prometheus metrics (plain text)
+- `GET /metrics.html` - Prometheus metrics (HTML table)
+
+### Tests
+- `GET /api/tests` - Test endpoints index (JSON)
+- `POST /api/tests/run` - Run all tests
+- `GET /api/tests/run` - Run all tests (GET method)
+- `POST /api/tests/unit` - Run unit tests only
+- `GET /api/tests/unit` - Run unit tests (GET method)
+- `POST /api/tests/pipeline` - Run e2e pipeline test
+- `GET /api/tests/pipeline` - Run pipeline test (GET method)
+
+### Cleanup
+- `POST /api/cleanup/images?age_minutes=30` - Clean up old Docker images
+- `GET /api/cleanup/images?age_minutes=30` - Clean up images (GET method)
+
+### Documentation
+- `GET /` - Home page with endpoint listing
+- `GET /api` - API index (HTML)
+- `GET /index.json` - All endpoints (JSON)
+- `GET /docs` - Swagger UI
+- `GET /redoc` - ReDoc documentation
 
 ## Environment configuration
 
