@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          pytest -q --tb=short
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: |
+          docker build -t algorithm-teacher:test .
+
+      - name: Test Docker image
+        run: |
+          docker run -d --name test-container -p 8000:8000 algorithm-teacher:test
+          sleep 5
+          docker ps
+          curl -f http://localhost:8000/ || exit 1
+          docker logs test-container
+          docker stop test-container
+          docker rm test-container
+
+  docker-e2e:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:7
+        ports:
+          - 27017:27017
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: |
+          docker build -t algorithm-teacher:test .
+
+      - name: Run Docker container with MongoDB
+        run: |
+          docker run -d \
+            --name test-app \
+            --network host \
+            -e MONGODB_URI=mongodb://localhost:27017 \
+            -e MONGODB_DB=test_db \
+            algorithm-teacher:test
+          sleep 5
+
+      - name: Run e2e tests against container
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          export MONGODB_URI=mongodb://localhost:27017
+          export MONGODB_DB=test_db
+          pytest -q tests/test_e2e.py -v
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker stop test-app || true
+          docker rm test-app || true
+

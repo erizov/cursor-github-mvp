@@ -1,34 +1,3 @@
-# cursor-github-mvp
-«MVP в Cursor → улучшение через GitHub (ветки + PR)»
-Цель
-Создать небольшой проект в Cursor, а потом улучшить его с помощью GitHub — сделать ветку, внести изменения, создать Pull Request и объединить в основную ветку.
-
-Минимум
-— Проект: cursor-github-mvp/ с папкой src/ (простой код) и файлом README.md.
-— MVP: любая базовая функция, страница или обработчик — главное, чтобы проект запускался.
-— Git (локально):
-инициализировать репозиторий (git init);
-сделать первый коммит с сообщением вроде init project.
-— GitHub:
-создать удалённый репозиторий и запушить туда ветку main;
-создать новую ветку feature/...;
-внести изменения (допиши что-то или отрефактори код);
-открыть Pull Request в main;
-написать короткое описание PR (что поменял);
-выполнить merge через интерфейс GitHub.
-— README.md:
-кратко опиши, что делает проект;
-добавь инструкцию, как его запустить;
-перечисли шаги — «ветка → PR → merge».
-Итог
-После выполнения у тебя будет:
-— рабочий MVP,
-— история изменений,
-— опыт создания ветки, Pull Request и merge в GitHub.
-
-
-**README:**
-
 AI Algorithm Teacher
 
 A simple rules-based tool that suggests AI/ML algorithms from a natural-language description, with explanations, next steps, and learning resources. It includes a FastAPI backend, MongoDB persistence, Prometheus metrics, and a minimal React report UI.
@@ -63,6 +32,9 @@ E:\Python\Cursor\4
 ├─ .github
 │  └─ workflows
 │     └─ ci.yml
+├─ scripts
+│  ├─ generate_prompts.py
+│  └─ seed_unique_requests.py
 ├─ ai_algorithm_teacher.py
 ├─ Dockerfile
 ├─ docker-compose.yml
@@ -251,7 +223,7 @@ Access:
 
 **With external MongoDB:**
 ```bash
-docker run -p 8000:8000 \
+docker run --name algorithm-teacher -p 8000:8000 \
   -e MONGODB_URI=mongodb://host.docker.internal:27017 \
   -e MONGODB_DB=algorithm_teacher \
   algorithm-teacher
@@ -331,6 +303,7 @@ pytest -q
 
 - Tests include:
   - Unit-ish API test for `POST /api/recommend` and `GET /api/reports/usage` with an in-memory repo
+  - Unique requests test verifying deduplication and algorithm type categorization
   - Metrics endpoint availability test for `GET /metrics`
   - E2E test posting multiple prompts then verifying usage totals
   - Docker build and run tests (`tests/test_docker.py`), including full e2e workflow test
@@ -441,8 +414,63 @@ Docker tests automatically:
 - Frontend report fails to load:
   - Serve `frontend/index.html` from the same origin as the API or adjust fetch URL to the API origin.
 
+## Unique Requests Database
+
+The system maintains a MongoDB collection of unique user requests categorized by algorithm type. This allows tracking distinct AI/ML problems submitted by users.
+
+### Features
+
+- **Automatic Storage**: Unique requests are automatically stored when recommendations are made
+- **Deduplication**: Duplicate prompts (case-insensitive) are not stored twice
+- **Algorithm Type Categorization**: Each request is categorized by the recommended algorithm type:
+  - Classification
+  - Regression
+  - Clustering
+  - Time Series
+  - NLP
+  - Vision
+  - Anomaly Detection
+  - Recommender Systems
+  - Reinforcement Learning
+  - Causal Inference
+  - Dimensionality Reduction
+  - Other
+
+### Seeding Database with 1000 Prompts
+
+The project includes scripts to generate and seed 1000 unique AI/ML prompts:
+
+**Generate prompts:**
+```bash
+python scripts/generate_prompts.py
+```
+
+This creates `prompts.txt` with 1000 unique prompts across all algorithm categories.
+
+**Seed database:**
+```bash
+python scripts/seed_unique_requests.py
+```
+
+This script:
+- Reads prompts from `generate_prompts.py`
+- Uses the recommendation engine to verify algorithm type categorization
+- Stores unique requests in the `unique_requests` MongoDB collection
+- Skips duplicates automatically
+
+**Prerequisites for seeding:**
+- MongoDB must be running and accessible
+- Set `MONGODB_URI` and `MONGODB_DB` environment variables if needed
+- Default connection: `mongodb://localhost:27017` with database `ai_algo_teacher`
+
+The seeding script will:
+- Add 1000 unique prompts (or fewer if duplicates are found)
+- Display progress every 100 prompts
+- Show final counts by algorithm type
+
 ## Notes
 
 - Transparent, rules-based engine for education and quick guidance; not a full AutoML system.
+- Unique requests are only stored when recommendations are successfully generated (at least one algorithm recommended).
 
 

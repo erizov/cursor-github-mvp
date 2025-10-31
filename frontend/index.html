@@ -1,0 +1,218 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Algorithm Teacher Reports</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1>Usage Report <span class="pill">AI Algorithm Teacher</span></h1>
+        <div class="row" style="margin-top:8px">
+          <div class="legend">
+            <a class="btn" href="http://127.0.0.1:8000/api/reports/usage.html" target="_blank" rel="noopener noreferrer">Usage HTML</a>
+            <a class="btn" href="http://127.0.0.1:8000/metrics.html" target="_blank" rel="noopener noreferrer">Metrics HTML</a>
+          </div>
+        </div>
+        <div id="root"></div>
+        <div class="footer">Tip: POST /api/recommend with a prompt to generate new selections.</div>
+      </div>
+    </div>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script>
+      const e = React.createElement;
+      const colors = ["#22c55e", "#60a5fa", "#f59e0b", "#ef4444", "#a78bfa", "#10b981", "#f472b6", "#34d399"];
+
+      function BarRow({ label, count, total, idx }) {
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        const style = { width: pct + "%", background: colors[idx % colors.length] };
+        return e('div', { className: 'grid', style: { alignItems: 'center' }}, [
+          e('div', { key: 'l', className: 'muted', style: { gridColumn: 'span 4' } }, label),
+          e('div', { key: 'b', className: 'bar', style: { gridColumn: 'span 6' } }, e('div', { style }, pct ? pct + '% ' + label : '')),
+          e('div', { key: 'c', style: { gridColumn: 'span 2', textAlign: 'right' } }, count)
+        ]);
+      }
+
+      function App() {
+        const [data, setData] = React.useState({ total: 0, counts: [] });
+        const [loading, setLoading] = React.useState(false);
+        const [error, setError] = React.useState('');
+        const [metrics, setMetrics] = React.useState({ rows: [], loading: false, error: '' });
+        const [seeding, setSeeding] = React.useState(false);
+        const categories = [
+          'Classification', 'Regression', 'Clustering', 'Dimensionality Reduction',
+          'Time Series', 'NLP', 'Vision', 'Anomaly Detection', 'Recommender Systems',
+          'Reinforcement Learning', 'Causal Inference', 'Other'
+        ];
+
+        const load = async () => {
+          setLoading(true); setError('');
+          try {
+            const res = await fetch('/api/reports/usage');
+            if (!res.ok) throw new Error('Failed to fetch report');
+            const json = await res.json();
+            setData(json);
+          } catch (err) {
+            setError(err.message || 'Error');
+          } finally { setLoading(false); }
+        };
+
+        React.useEffect(() => { load(); }, []);
+
+        const parseMetricsText = (text) => {
+          const lines = text.split(/\n+/).map(l => l.trim()).filter(l => l && !l.startsWith('#'));
+          const out = [];
+          for (const line of lines) {
+            const space = line.lastIndexOf(' ');
+            if (space <= 0) continue;
+            const left = line.slice(0, space);
+            const valueStr = line.slice(space + 1);
+            const value = Number(valueStr);
+            let name = left;
+            let labels = {};
+            const lb = left.indexOf('{');
+            const rb = left.lastIndexOf('}');
+            if (lb !== -1 && rb !== -1 && rb > lb) {
+              name = left.slice(0, lb);
+              const labelStr = left.slice(lb + 1, rb);
+              if (labelStr.trim()) {
+                for (const pair of labelStr.split(',')) {
+                  const [k, v] = pair.split('=');
+                  if (k && v) labels[k.trim()] = v.trim().replace(/^"|"$/g, '');
+                }
+              }
+            }
+            out.push({ name, labels, value });
+          }
+          return out;
+        };
+
+        const loadMetrics = async () => {
+          setMetrics(m => ({ ...m, loading: true, error: '' }));
+          try {
+            const res = await fetch('/metrics');
+            if (!res.ok) throw new Error('Failed to fetch metrics');
+            const text = await res.text();
+            const parsed = parseMetricsText(text)
+              .filter(m => m.name === 'recommendations_total' || m.name === 'algorithm_top_selections_total')
+              .sort((a, b) => a.name.localeCompare(b.name));
+            setMetrics({ rows: parsed, loading: false, error: '' });
+          } catch (err) {
+            setMetrics({ rows: [], loading: false, error: err.message || 'Error' });
+          }
+        };
+
+        const MetricsTable = ({ rows }) => (
+          e('table', { className: 'table' }, [
+            e('thead', { key: 'h' }, e('tr', null, [
+              e('th', { key: 'm' }, 'Metric'),
+              e('th', { key: 'l' }, 'Labels'),
+              e('th', { key: 'v' }, 'Value'),
+            ])),
+            e('tbody', { key: 'b' }, rows.map((r, i) => e('tr', { key: i }, [
+              e('td', { key: 'm' }, r.name),
+              e('td', { key: 'l' }, Object.keys(r.labels || {}).length ? Object.entries(r.labels).map(([k, v]) => e('span', { key: k, className: 'chip', style: { marginRight: 6 } }, [e('span', { className: 'chip-key' }, k+':'), e('span', null, v)])) : e('span', { className: 'muted' }, '—')),
+              e('td', { key: 'v' }, String(r.value)),
+            ])))
+          ])
+        );
+
+        const seedDemo = async () => {
+          if (seeding) return;
+          setSeeding(true);
+          const prompts = [
+            "Classify customer reviews by sentiment with a small labeled dataset",
+            "Predict house prices from numerical features",
+            "Cluster customers into segments based on transactions",
+            "Forecast monthly demand with trend and seasonality",
+            "Detect anomalies in server metrics with rare spikes",
+            "Recommend items to users based on interaction history",
+            "Fine-tune a BERT model to classify support tickets by topic",
+            "Image classification for plant diseases using transfer learning",
+            "Object detection for detecting cars and pedestrians in street images",
+            "Train an agent with reinforcement learning to maximize long-term rewards",
+            "Estimate causal effect of a marketing campaign on sales using observational data",
+            "Visualize high-dimensional embeddings with PCA and UMAP",
+            "Classify documents with a clear margin between classes using SVM",
+            "Use KNN to classify iris flowers with standardized features",
+            "Use LSTM to forecast a multivariate time series with long dependencies",
+          ];
+          try {
+            for (const p of prompts) {
+              await fetch('/api/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: p })
+              });
+            }
+            await load();
+          } finally {
+            setSeeding(false);
+          }
+        };
+
+        const getCategoryForAlgorithm = (name) => {
+          const n = name.toLowerCase();
+          if (n.includes('logistic') || n.includes('svm') || n.includes('random forest (classification)') || n.includes('naive bayes') || n.includes('knn')) return 'Classification';
+          if (n.includes('linear regression') || n.includes('random forest (regression)') || (n.includes('gradient boosting') && !n.includes('classification'))) return 'Regression';
+          if (n.includes('k-means') || n.includes('dbscan')) return 'Clustering';
+          if (n.includes('pca') || n.includes('t-sne') || n.includes('umap')) return 'Dimensionality Reduction';
+          if (n.includes('arima') || n.includes('prophet') || n.includes('lstm') || n.includes('temporal')) return 'Time Series';
+          if (n.includes('bert') || n.includes('roberta') || n.includes('text')) return 'NLP';
+          if (n.includes('cnn') || n.includes('vision') || n.includes('object detection') || n.includes('yolo') || n.includes('faster r-cnn')) return 'Vision';
+          if (n.includes('anomaly') || n.includes('isolation forest') || n.includes('one-class')) return 'Anomaly Detection';
+          if (n.includes('recsys') || n.includes('recommend')) return 'Recommender Systems';
+          if (n.includes('reinforcement') || n.includes('dqn') || n.includes('ppo')) return 'Reinforcement Learning';
+          if (n.includes('causal') || n.includes('dowhy') || n.includes('ate')) return 'Causal Inference';
+          return 'Other';
+        };
+
+        const grouped = React.useMemo(() => {
+          const g = Object.fromEntries(categories.map(c => [c, []]));
+          for (const c of (data.counts || [])) {
+            const cat = getCategoryForAlgorithm(c.algorithm);
+            g[cat].push(c);
+          }
+          return g;
+        }, [data]);
+
+        const Section = ({ title, items }) => (
+          e(React.Fragment, null, [
+            e('div', { key: title + '-title', className: 'section-title' }, title),
+            items.length ? e('div', { key: title + '-bars', style: { marginTop: 8 } }, items.map((c, i) => e(BarRow, { key: c.algorithm, label: c.algorithm, count: c.count, total: data.total, idx: i })))
+                       : e('div', { key: title + '-empty', className: 'muted', style: { marginTop: 8 } }, 'No data yet')
+          ])
+        );
+
+        return e(React.Fragment, null, [
+          e('div', { key: 'row', className: 'row' }, [
+            e('div', { key: 'left', className: 'muted' }, `Total selections: `, e('span', { className: 'accent' }, data.total)),
+            e('div', { key: 'actions', style: { display: 'flex', gap: 8 } }, [
+              e('button', { key: 'btn', className: 'btn', onClick: load }, loading ? 'Refreshing…' : 'Refresh'),
+              e('button', { key: 'seed', className: 'btn', onClick: seedDemo }, seeding ? 'Seeding…' : 'Seed demo data')
+            ])
+          ]),
+          error ? e('div', { key: 'err', style: { color: '#ef4444', marginTop: 12 } }, error) : null,
+          // Category sections
+          ...categories.map(cat => e(Section, { key: 'sec-' + cat, title: cat, items: grouped[cat] || [] })),
+          e('div', { key: 'mtitle', className: 'row', style: { marginTop: 28 } }, [
+            e('div', { key: 'h', className: 'muted' }, 'Metrics report from /metrics'),
+            e('button', { key: 'mbtn', className: 'btn', onClick: loadMetrics }, metrics.loading ? 'Loading…' : 'Load metrics')
+          ]),
+          metrics.error ? e('div', { key: 'merr', style: { color: '#ef4444', marginTop: 12 } }, metrics.error) : null,
+          metrics.rows.length ? e(MetricsTable, { key: 'mtable', rows: metrics.rows }) : null
+        ]);
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(e(App));
+    </script>
+  </body>
+  </html>
+
+
