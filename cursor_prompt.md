@@ -1,112 +1,57 @@
-## Cursor Project Prompt: AI Algorithm Teacher
+## Cursor Project Prompt: AI Algorithm Teacher (Simplified)
 
-### Overview
-AI Algorithm Teacher is a rules-based helper that recommends AI/ML algorithms
-from natural-language descriptions. It provides:
-- FastAPI backend with endpoints for recommendations and reports
-- Optional MongoDB persistence
-- Prometheus metrics at `/metrics`
-- Minimal HTML/JS report UI
-- Tests for API, E2E flows, and Docker
+You are generating or editing a small FastAPI service that recommends AI/ML
+algorithms from a short natural-language description. Keep it minimal and easy
+to run locally.
 
-### Tech Stack
-- Python 3.11
-- FastAPI, Uvicorn
-- `pymongo` (MongoDB optional)
-- `prometheus-fastapi-instrumentator`
-- Pytest
-- Docker and Docker Compose (optional)
+### Goals
+- In-memory by default (no external DB required)
+- Clean API: `POST /api/recommend`, reports at `/api/reports/usage(.html)`
+- Small frontend page in `frontend/index.html` that fetches usage stats
+- Keep tests green: unit-ish API, e2e flow, metrics endpoint
 
-### How to Run (Dev)
-1) Install deps:
+### Non-goals (do NOT add by default)
+- No mandatory MongoDB. DB is optional via `repositories.py` abstraction
+- No heavy metrics or dashboards beyond `/metrics` if already present
+- No complex UI; keep the HTML minimal and self-contained
+
+### Run locally
 ```
 python -m pip install -r requirements.txt
-```
-2) Start API:
-```
 uvicorn backend.app:app --reload
 ```
-3) Open:
-- API root: http://localhost:8000/
-- Recommendations (POST): `/api/recommend`
-- Usage report (JSON): `/api/reports/usage`
-- Usage report (HTML): `/api/reports/usage.html`
-- Metrics: `/metrics`
 
-### Docker
-- Build:
-```
-docker build -t algorithm-teacher .
-```
-- Run (external Mongo):
-```
-docker run --name algorithm-teacher -p 8000:8000 \
-  -e MONGODB_URI=mongodb://host.docker.internal:27017 \
-  -e MONGODB_DB=algorithm_teacher \
-  algorithm-teacher
-```
-- Compose (with MongoDB):
-```
-docker-compose up
-```
+### Endpoints
+- `POST /api/recommend` with JSON `{ "prompt": "..." }` returns algorithms
+- `GET /api/reports/usage` returns counts JSON
+- `GET /api/reports/usage.html` returns a simple chart
+- `GET /metrics` (optional; keep current behavior if present)
 
-### Tests
-```
-python -m pip install -r requirements.txt
-pytest -q
-```
-Key suites:
-- Unit-ish API tests
-- E2E tests creating multiple prompts
-- Docker build/run tests
-- Metrics endpoint test
-
-### Project Structure (key paths)
+### Project layout (expected)
 ```
 backend/
-  app.py               # FastAPI app and routes mounting
-  services.py          # Core recommendation logic
-  repositories.py      # Persistence abstraction (in-memory, Mongo)
-  routers/             # API routers (index, recommendations, reports)
+  app.py            # FastAPI app and router mounting
+  services.py       # Recommendation rules
+  repositories.py   # In-memory + optional Mongo behind an interface
+  routers/          # index, recommendations, reports
 frontend/
-  index.html           # Minimal report UI (fetches /api/reports/usage)
+  index.html        # Minimal usage chart
 tests/
   test_api.py, test_e2e.py, test_metrics.py, test_docker.py
-scripts/
-  generate_prompts.py, seed_unique_requests.py
-ai_algorithm_teacher.py # CLI entry point
+ai_algorithm_teacher.py  # CLI entry point
 ```
 
-### Coding Conventions (enforced preferences)
-- PEP 8, UTF-8, 4-space indents, max line length 79
-- Imports grouped: stdlib → third-party → local, one per line
-- Naming: snake_case (modules/functions/vars), CapWords (classes),
-  UPPER_SNAKE_CASE (constants), private with leading underscore
-- Type hints for public functions and return types
-- Use `is`/`is not` for `None`; check emptiness with `if items:`
-- No bare `except:`; avoid mutable default args
-- Use logger for server code (no `print`)
+### Coding conventions
+- PEP 8, UTF-8, 4 spaces, line length ≤ 79
+- Imports: stdlib → third-party → local, one per line
+- Use type hints for public interfaces; no bare `except:`
+- Use logger in server code; avoid `print`
 
-### Contribution Guidance for Cursor
-- Prefer small, focused edits; keep functions short and readable
-- Add or extend tests for new behavior
-- Maintain existing API contracts and response shapes
-- When touching DB logic, keep `repositories.py` abstractions intact
-- Keep metrics backward compatible where possible
-- For user-visible changes, update `README.md`
-
-### Git Workflow
-- Default branch: `main` (synchronized with `master`)
-- Open PRs from feature branches into `main`
-- Keep `.gitignore` exclusions for caches, venvs, and office docs
-
-### Non-Goals
-- This is not AutoML; it offers transparent, rules-based guidance
-
-### Quick Task Ideas
-- Expand algorithm rules/coverage in `services.py`
-- Add more detailed HTML reports in `routers/reports.py`
-- Enhance frontend styling in `frontend/styles.css`
-- Improve metrics or add histograms for latency
+### Acceptance criteria
+- App starts with `uvicorn backend.app:app --reload`
+- `POST /api/recommend` returns at least one suggested algorithm for common
+  prompts (classification/regression/clustering/time series)
+- Usage endpoints respond and the HTML chart renders without extra setup
+- Tests pass with `pytest -q`
 
 
