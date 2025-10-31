@@ -116,33 +116,150 @@ async def root_index_json(request: Request) -> JSONResponse:
 
 @router.get("/api", response_class=HTMLResponse)
 async def api_index(request: Request) -> HTMLResponse:
-    links = "\n".join(
-        [
-            _link("/api/recommend", "POST /api/recommend"),
-            _link("/api/reports", "GET /api/reports", "Reports & Monitoring Index"),
-            _link("/api/reports/usage", "GET /api/reports/usage"),
-            _link("/api/reports/usage.html", "GET /api/reports/usage.html", "HTML"),
-            _link("/api/reports/details", "GET /api/reports/details"),
-            _link("/api/reports/details.html", "GET /api/reports/details.html", "HTML"),
-            _link("/api/monitoring", "GET /api/monitoring", "Monitoring Index"),
-            _link("/metrics", "GET /metrics", "Prometheus"),
-            _link("/metrics.html", "GET /metrics.html", "Prometheus HTML"),
-            _link("/api/tests", "GET /api/tests", "Tests Index"),
-            _link("/api/tests/run", "POST /api/tests/run", "Run All Tests"),
-            _link("/api/tests/unit", "POST /api/tests/unit", "Run Unit Tests"),
-            _link("/api/tests/pipeline", "POST /api/tests/pipeline", "Run Pipeline Test"),
-            _link("/api/cleanup/images", "POST /api/cleanup/images", "Cleanup Old Images"),
-            _link("/docs", "Swagger UI"),
-            _link("/redoc", "ReDoc"),
-            _link("/readme", "Project README"),
-        ]
-    )
+    """API Index with endpoints grouped by functionality and descriptions."""
+    
+    endpoint_groups = [
+        {
+            "title": "Recommendations",
+            "endpoints": [
+                {
+                    "method": "POST",
+                    "path": "/api/recommend",
+                    "description": "Get AI/ML algorithm recommendations for a natural-language prompt"
+                }
+            ]
+        },
+        {
+            "title": "Reports",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/api/reports",
+                    "description": "Reports and monitoring index page (HTML)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/index.json",
+                    "description": "Reports index with all available endpoints (JSON)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/usage",
+                    "description": "Algorithm usage statistics and counts (JSON)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/usage.html",
+                    "description": "Usage statistics visualized as a chart (HTML)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/details",
+                    "description": "Detailed report with prompts and timestamps grouped by algorithm (JSON)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/api/reports/details.html",
+                    "description": "Detailed report with prompts and timestamps (HTML)"
+                }
+            ]
+        },
+        {
+            "title": "Monitoring",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/api/monitoring",
+                    "description": "Monitoring endpoints index with available metrics (JSON)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/metrics",
+                    "description": "Prometheus metrics in plain text format (for scraping)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/metrics.html",
+                    "description": "Prometheus metrics formatted as an HTML table"
+                }
+            ]
+        },
+        {
+            "title": "Tests",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/api/tests",
+                    "description": "Test endpoints index with descriptions and methods (JSON)"
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/tests/run",
+                    "description": "Run all tests (default: pytest -q tests/)"
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/tests/unit",
+                    "description": "Run unit tests only (excludes Docker and e2e tests)"
+                },
+                {
+                    "method": "POST",
+                    "path": "/api/tests/pipeline",
+                    "description": "Run end-to-end pipeline test (builds Docker, runs container, verifies endpoints)"
+                }
+            ]
+        },
+        {
+            "title": "Cleanup",
+            "endpoints": [
+                {
+                    "method": "POST",
+                    "path": "/api/cleanup/images",
+                    "description": "Clean up old Docker images matching alg-teach-* pattern (default: older than 30 minutes)"
+                }
+            ]
+        },
+        {
+            "title": "Documentation",
+            "endpoints": [
+                {
+                    "method": "GET",
+                    "path": "/docs",
+                    "description": "Interactive Swagger UI with OpenAPI documentation"
+                },
+                {
+                    "method": "GET",
+                    "path": "/redoc",
+                    "description": "ReDoc alternative OpenAPI documentation interface"
+                },
+                {
+                    "method": "GET",
+                    "path": "/readme",
+                    "description": "Project README.md rendered as HTML"
+                }
+            ]
+        }
+    ]
+    
+    groups_html = ""
+    for group in endpoint_groups:
+        endpoints_html = "\n".join(
+            f'        <li><a href="{ep["path"]}"><code>{ep["method"]} {ep["path"]}</code></a> '
+            f'<span class="pill">{ep["method"]}</span><br>'
+            f'        <span class="small" style="margin-left: 1.5rem; display: block; margin-top: 0.2rem;">{ep["description"]}</span></li>'
+            for ep in group["endpoints"]
+        )
+        groups_html += f"""
+      <h2>{group["title"]}</h2>
+      <ul>
+{endpoints_html}
+      </ul>
+"""
+    
     body = f"""
       <h1>API Index</h1>
-      <p class=\"small\">Host: {request.url.hostname} • Path: {request.url.path}</p>
-      <ul>
-        {links}
-      </ul>
+      <p class="small">Host: {request.url.hostname} • Path: {request.url.path}</p>
+      {groups_html}
     """
     return HTMLResponse(content=_html_page("API Index", body))
 
