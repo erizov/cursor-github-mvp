@@ -18,3 +18,7 @@ venv/
 Thumbs.db
 .idea/
 .vscode/
+
+# Office documents
+*.docx
+~$*.docx
