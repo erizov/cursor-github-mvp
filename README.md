@@ -4,6 +4,22 @@ A small, rules-based FastAPI service that recommends AI/ML algorithms from a
 natural-language description. The simplified default uses in-memory storage and
 keeps the surface area minimal.
 
+## Weekly Prompt Updates
+
+The project includes an automated system to fetch and update AI/ML prompts from internet sources (Stack Overflow, etc.) on a weekly basis. Prompts are automatically categorized and added to `prompts.txt`, with a maximum limit of 30,000 prompts.
+
+**Setup:** See [README_CRON.md](README_CRON.md) for detailed instructions.
+
+**Windows (run as Administrator):**
+```powershell
+.\scripts\setup_cron.ps1
+```
+
+**Linux/macOS:**
+```bash
+chmod +x scripts/setup_cron.sh && ./scripts/setup_cron.sh
+```
+
 ## Quickstart
 
 ### Start FastAPI Server

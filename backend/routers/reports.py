@@ -72,11 +72,12 @@ def _format_label(key: str) -> str:
 
 
 def _merge_counts(counts: list[dict]) -> list[dict]:
-    """Merge counts by algorithm type (25 categories) instead of algorithm name.
+    """Merge counts by algorithm type (24 categories, excluding "Other") instead of algorithm name.
     
-    Always returns all 25 algorithm type categories, even if some have zero counts.
+    Always returns all 24 algorithm type categories, even if some have zero counts.
+    Excludes "Other" category from results.
     """
-    # Initialize all 25 algorithm type categories
+    # Initialize all 24 algorithm type categories (excluding "Other")
     all_categories = [
         "Classification", "Regression", "Clustering", "Dimensionality Reduction",
         "Time Series", "Sequence Models", "NLP", "Vision", "Computer Vision Detection",
@@ -84,7 +85,7 @@ def _merge_counts(counts: list[dict]) -> list[dict]:
         "Causal Inference", "Ensemble Methods", "Optimization", "Graph Algorithms",
         "Transfer Learning", "Generative Models", "Natural Language Generation",
         "Feature Engineering", "Deep Learning", "Computer Vision Segmentation",
-        "Multi-modal Learning", "AutoML", "Other"
+        "Multi-modal Learning", "AutoML"
     ]
     merged: dict[str, int] = {cat: 0 for cat in all_categories}
     
@@ -141,9 +142,11 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             """
         )
 
-    # Prepare data for charts (show top 25 categories)
-    chart_labels = [c["algorithm"] for c in counts[:25]]
-    chart_data = [c["count"] for c in counts[:25]]
+    # Prepare data for charts (show top 24 categories, excluding "Other")
+    # Filter out "Other" from counts
+    counts_filtered = [c for c in counts if c["algorithm"] != "Other"]
+    chart_labels = [c["algorithm"] for c in counts_filtered[:24]]
+    chart_data = [c["count"] for c in counts_filtered[:24]]
     chart_colors = [
         "rgba(122, 162, 247, 0.8)", "rgba(139, 213, 202, 0.8)", "rgba(106, 214, 154, 0.8)",
         "rgba(251, 191, 36, 0.8)", "rgba(239, 68, 68, 0.8)", "rgba(167, 139, 250, 0.8)",
@@ -152,8 +155,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
         "rgba(14, 165, 233, 0.8)", "rgba(20, 184, 166, 0.8)", "rgba(245, 158, 11, 0.8)",
         "rgba(217, 70, 239, 0.8)", "rgba(99, 102, 241, 0.8)", "rgba(225, 29, 72, 0.8)",
         "rgba(6, 182, 212, 0.8)", "rgba(16, 185, 129, 0.8)", "rgba(251, 146, 60, 0.8)",
-        "rgba(139, 92, 246, 0.8)", "rgba(59, 130, 246, 0.8)", "rgba(236, 72, 153, 0.8)",
-        "rgba(34, 211, 238, 0.8)"
+        "rgba(139, 92, 246, 0.8)", "rgba(59, 130, 246, 0.8)", "rgba(236, 72, 153, 0.8)"
     ]
     
     body = f"""
@@ -693,6 +695,17 @@ async def reports_index(request: Request) -> HTMLResponse:
           <div class="subtitle">Comprehensive analytics and observability dashboard</div>
           
           <div class="section">
+            <h2>⚡ Performance Reports</h2>
+            <div class="endpoint">
+              <div class="endpoint-header">
+                <span class="method get">GET</span>
+                <a href="/api/performance/report">/api/performance/report</a>
+              </div>
+              <p>Interactive performance report comparing all backends (inmemory, mongodb, sqlite) with charts for inserts, updates, deletes operations</p>
+            </div>
+          </div>
+          
+          <div class="section">
             <h2>📊 Usage Reports</h2>
             <div class="endpoint">
               <div class="endpoint-header">
@@ -757,6 +770,7 @@ async def reports_index(request: Request) -> HTMLResponse:
               <li><a href="/docs">Swagger UI</a></li>
               <li><a href="/redoc">ReDoc</a></li>
               <li><a href="/index.json">All Endpoints (JSON)</a></li>
+              <li><a href="/api/performance/report">Performance Report</a></li>
               <li><a href="/api/reports/usage.html">Usage Report</a></li>
             </ul>
           </div>

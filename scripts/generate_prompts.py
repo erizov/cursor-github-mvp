@@ -1002,6 +1002,9 @@ def generate_all_prompts() -> List[Tuple[str, str]]:
     all_prompts.extend(generate_multimodal_prompts())
     all_prompts.extend(generate_automl_prompts())
     
+    # Filter out "Other" category prompts
+    all_prompts = [(p, t) for p, t in all_prompts if t != "Other"]
+    
     # Ensure we have exactly 10000 by expanding variations if needed
     target = 10000
     base = list(all_prompts)
@@ -1009,10 +1012,15 @@ def generate_all_prompts() -> List[Tuple[str, str]]:
     while len(all_prompts) < target:
         p, t = base[i % len(base)]
         # Add a lightweight variant suffix to keep uniqueness while preserving category
-        all_prompts.append((f"{p} (variant {i+1})", t))
+        # Skip if category is "Other"
+        if t != "Other":
+            all_prompts.append((f"{p} (variant {i+1})", t))
         i += 1
     if len(all_prompts) > target:
         all_prompts = all_prompts[:target]
+    
+    # Final filter to ensure no "Other" prompts
+    all_prompts = [(p, t) for p, t in all_prompts if t != "Other"]
     
     return all_prompts
 

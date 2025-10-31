@@ -52,7 +52,7 @@
           'Causal Inference', 'Ensemble Methods', 'Optimization', 'Graph Algorithms',
           'Transfer Learning', 'Generative Models', 'Natural Language Generation',
           'Feature Engineering', 'Deep Learning', 'Computer Vision Segmentation',
-          'Multi-modal Learning', 'AutoML', 'Other'
+          'Multi-modal Learning', 'AutoML'
         ];
 
         const load = async () => {
@@ -187,7 +187,8 @@
           if (n.includes('segmentation') || n.includes('semantic segmentation') || n.includes('instance segmentation')) return 'Computer Vision Segmentation';
           if (n.includes('multi-modal') || n.includes('multimodal') || n.includes('cross-modal')) return 'Multi-modal Learning';
           if (n.includes('automl') || n.includes('auto-ml') || n.includes('automated machine learning') || n.includes('neural architecture search')) return 'AutoML';
-          return 'Other';
+          // Exclude "Other" - return first category if no match
+          return 'Classification';
         };
 
         const grouped = React.useMemo(() => {

@@ -191,8 +191,10 @@ def cleanup_old_images(age_minutes: int = 15, dry_run: bool = False) -> int:
                 removed_count += 1
             else:
                 print(f"  Removing {img['repository']}:{img['tag']} (unused, age: {age_str})")
+                # Remove by image name (repository:tag) instead of ID to handle shared image IDs
+                image_ref = img["image_name"] if img.get("tag") != "<none>" else img["id"]
                 result = subprocess.run(
-                    ["docker", "rmi", "-f", img["id"]],
+                    ["docker", "rmi", "-f", image_ref],
                     capture_output=True,
                     text=True,
                     timeout=30,
@@ -200,7 +202,20 @@ def cleanup_old_images(age_minutes: int = 15, dry_run: bool = False) -> int:
                 if result.returncode == 0:
                     removed_count += 1
                 else:
-                    print(f"    Warning: Failed to remove {img['repository']}: {result.stderr}")
+                    # If removal by name fails, try by ID as fallback
+                    if image_ref != img["id"]:
+                        result2 = subprocess.run(
+                            ["docker", "rmi", "-f", img["id"]],
+                            capture_output=True,
+                            text=True,
+                            timeout=30,
+                        )
+                        if result2.returncode == 0:
+                            removed_count += 1
+                        else:
+                            print(f"    Warning: Failed to remove {img['repository']}:{img['tag']} - {result2.stderr}")
+                    else:
+                        print(f"    Warning: Failed to remove {img['repository']}:{img['tag']} - {result.stderr}")
         else:
             age_delta = now - created
             age_str = str(age_delta).split(".")[0]

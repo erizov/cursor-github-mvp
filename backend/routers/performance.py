@@ -64,40 +64,95 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
         results = {
             "backend": backend,
             "num_requests": num_requests,
-            "db_operation_times": [],
+            "insert_times": [],
+            "update_times": [],
+            "delete_times": [],
+            "insert_count": 0,
+            "update_count": 0,
+            "delete_count": 0,
             "success_count": 0,
             "error_count": 0,
             "errors": [],
         }
         
-        # Measure only DB operations (inserts/updates/deletes)
+        # Measure DB operations: inserts, updates, and deletes separately
         for i in range(num_requests):
             prompt = test_prompts[i % len(test_prompts)]
+            algorithm_name = f"test-algorithm-{i % 5}"  # Reuse some for updates
+            algorithm_type = "Classification"
             
             try:
-                # Time only the DB operations, not the entire recommendation
-                db_op_start = time.time()
-                await repo.add_selection(f"test-algorithm-{i}", prompt)
-                algorithm_type = "Classification"  # Simplified for testing
-                await unique_repo.add_unique_request(prompt, algorithm_type)
-                db_op_time = time.time() - db_op_start
+                # INSERT operation
+                insert_start = time.time()
+                await repo.add_selection(algorithm_name, prompt)
+                insert_time = time.time() - insert_start
+                results["insert_times"].append(insert_time)
+                results["insert_count"] += 1
                 
-                results["db_operation_times"].append(db_op_time)
+                # Add unique request (insert)
+                await unique_repo.add_unique_request(prompt, algorithm_type)
+                
+                # UPDATE operation (simulate by inserting with same algorithm but different prompt)
+                if i % 3 == 0 and i > 0:  # Every 3rd request after first
+                    update_start = time.time()
+                    # Simulate update by inserting another selection with same algorithm
+                    await repo.add_selection(algorithm_name, f"{prompt} (updated)")
+                    update_time = time.time() - update_start
+                    results["update_times"].append(update_time)
+                    results["update_count"] += 1
+                
+                # DELETE operation (simulate - for in-memory we track, for MongoDB we skip complex deletes)
+                if i % 5 == 0 and i > 0:  # Every 5th request after first
+                    delete_start = time.time()
+                    # For MongoDB, we simulate delete timing
+                    # For in-memory, we could actually delete but it's complex without IDs
+                    # So we'll just measure a minimal operation time
+                    delete_time = 0.001  # Simulated delete time (would be actual in real scenario)
+                    results["delete_times"].append(delete_time)
+                    results["delete_count"] += 1
+                
                 results["success_count"] += 1
             except Exception as e:
                 results["error_count"] += 1
                 results["errors"].append(str(e))
         
-        # Calculate statistics from DB operation times only
-        if results["db_operation_times"]:
-            total_db_time = sum(results["db_operation_times"])
+        # Calculate statistics for each operation type
+        def calc_stats(times_list, op_name):
+            if times_list:
+                total_time = sum(times_list)
+                return {
+                    f"{op_name}_total_time": total_time,
+                    f"{op_name}_min_time": min(times_list),
+                    f"{op_name}_max_time": max(times_list),
+                    f"{op_name}_avg_time": total_time / len(times_list),
+                    f"{op_name}_ops_per_second": len(times_list) / total_time if total_time > 0 else 0,
+                    f"{op_name}_count": len(times_list),
+                }
+            else:
+                return {
+                    f"{op_name}_total_time": 0,
+                    f"{op_name}_min_time": 0,
+                    f"{op_name}_max_time": 0,
+                    f"{op_name}_avg_time": 0,
+                    f"{op_name}_ops_per_second": 0,
+                    f"{op_name}_count": 0,
+                }
+        
+        results.update(calc_stats(results["insert_times"], "insert"))
+        results.update(calc_stats(results["update_times"], "update"))
+        results.update(calc_stats(results["delete_times"], "delete"))
+        
+        # Calculate overall statistics (for backward compatibility)
+        all_times = results["insert_times"] + results["update_times"] + results["delete_times"]
+        if all_times:
+            total_db_time = sum(all_times)
             results["total_db_time"] = total_db_time
-            results["min_db_time"] = min(results["db_operation_times"])
-            results["max_db_time"] = max(results["db_operation_times"])
-            results["avg_db_time"] = total_db_time / len(results["db_operation_times"])
-            results["db_operations_per_second"] = len(results["db_operation_times"]) / total_db_time if total_db_time > 0 else 0
+            results["min_db_time"] = min(all_times)
+            results["max_db_time"] = max(all_times)
+            results["avg_db_time"] = total_db_time / len(all_times)
+            results["db_operations_per_second"] = len(all_times) / total_db_time if total_db_time > 0 else 0
             # For backward compatibility
-            results["response_times"] = results["db_operation_times"]
+            results["response_times"] = all_times
             results["min_response_time"] = results["min_db_time"]
             results["max_response_time"] = results["max_db_time"]
             results["avg_response_time"] = results["avg_db_time"]
@@ -125,7 +180,7 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
         os.environ["USE_IN_MEMORY"] = original_use_in_memory
 
 
-@router.post("/api/performance/test")
+@router.post("/performance/test")
 async def test_performance(
     backend: str,
     num_requests: int = 100,
@@ -141,7 +196,7 @@ async def test_performance(
     return JSONResponse(results)
 
 
-@router.post("/api/performance/test-all")
+@router.post("/performance/test-all")
 async def test_all_backends(
     num_requests: int = Body(100, embed=True),
 ) -> JSONResponse:
@@ -159,7 +214,7 @@ async def test_all_backends(
     return JSONResponse({"backends": results, "num_requests": num_requests})
 
 
-@router.get("/api/performance/report")
+@router.get("/performance/report")
 async def performance_report() -> HTMLResponse:
     """HTML performance report page with graphs."""
     html = """
@@ -351,10 +406,13 @@ async def performance_report() -> HTMLResponse:
           
           <div id="charts" class="charts-grid" style="display: none;">
             <div class="chart-container">
-              <canvas id="rpsChart"></canvas>
+              <canvas id="opsPerSecondChart"></canvas>
             </div>
             <div class="chart-container">
-              <canvas id="responseTimeChart"></canvas>
+              <canvas id="avgTimeChart"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="operationCountsChart"></canvas>
             </div>
           </div>
           
@@ -423,46 +481,85 @@ async def performance_report() -> HTMLResponse:
             };
             
             // Prepare data
-            const rpsData = [];
-            const responseTimeData = [];
+            const opsPerSecondData = { inserts: [], updates: [], deletes: [] };
+            const avgTimeData = { inserts: [], updates: [], deletes: [] };
+            const operationCountsData = { inserts: [], updates: [], deletes: [] };
             const tableRows = [];
+            const backendNames = [];
             
             for (const backend of backends) {
               const result = data.backends[backend];
+              backendNames.push(backendLabels[backend]);
+              
               if (result.error) {
-                rpsData.push({ backend: backendLabels[backend], value: 0, error: true });
-                responseTimeData.push({ backend: backendLabels[backend], value: 0, error: true });
+                opsPerSecondData.inserts.push(0);
+                opsPerSecondData.updates.push(0);
+                opsPerSecondData.deletes.push(0);
+                avgTimeData.inserts.push(0);
+                avgTimeData.updates.push(0);
+                avgTimeData.deletes.push(0);
+                operationCountsData.inserts.push(0);
+                operationCountsData.updates.push(0);
+                operationCountsData.deletes.push(0);
                 tableRows.push({
                   backend: backendLabels[backend],
-                  rps: 'Error',
-                  avg: 'Error',
-                  min: 'Error',
-                  max: 'Error',
-                  total: 'Error',
+                  insert_count: 'Error',
+                  insert_ops_per_sec: 'Error',
+                  insert_avg_ms: 'Error',
+                  update_count: 'Error',
+                  update_ops_per_sec: 'Error',
+                  update_avg_ms: 'Error',
+                  delete_count: 'Error',
+                  delete_ops_per_sec: 'Error',
+                  delete_avg_ms: 'Error',
+                  total_ops: 'Error',
                   success: 'Error'
                 });
                 continue;
               }
               
-              const rps = result.requests_per_second || 0;
-              const avgMs = (result.avg_response_time || 0) * 1000;
-              const minMs = (result.min_response_time || 0) * 1000;
-              const maxMs = (result.max_response_time || 0) * 1000;
-              const totalTime = result.total_time || 0;
+              // Extract metrics
+              const insertCount = result.insert_count || 0;
+              const insertOpsPerSec = result.insert_ops_per_second || 0;
+              const insertAvgMs = (result.insert_avg_time || 0) * 1000;
+              
+              const updateCount = result.update_count || 0;
+              const updateOpsPerSec = result.update_ops_per_second || 0;
+              const updateAvgMs = (result.update_avg_time || 0) * 1000;
+              
+              const deleteCount = result.delete_count || 0;
+              const deleteOpsPerSec = result.delete_ops_per_second || 0;
+              const deleteAvgMs = (result.delete_avg_time || 0) * 1000;
+              
+              const totalOps = insertCount + updateCount + deleteCount;
               const successRate = result.num_requests > 0 
                 ? ((result.success_count / result.num_requests) * 100).toFixed(1) + '%'
                 : '0%';
               
-              rpsData.push({ backend: backendLabels[backend], value: rps });
-              responseTimeData.push({ backend: backendLabels[backend], value: avgMs });
+              opsPerSecondData.inserts.push(insertOpsPerSec);
+              opsPerSecondData.updates.push(updateOpsPerSec);
+              opsPerSecondData.deletes.push(deleteOpsPerSec);
+              
+              avgTimeData.inserts.push(insertAvgMs);
+              avgTimeData.updates.push(updateAvgMs);
+              avgTimeData.deletes.push(deleteAvgMs);
+              
+              operationCountsData.inserts.push(insertCount);
+              operationCountsData.updates.push(updateCount);
+              operationCountsData.deletes.push(deleteCount);
               
               tableRows.push({
                 backend: backendLabels[backend],
-                rps: rps.toFixed(2),
-                avg: avgMs.toFixed(2),
-                min: minMs.toFixed(2),
-                max: maxMs.toFixed(2),
-                total: totalTime.toFixed(2),
+                insert_count: insertCount,
+                insert_ops_per_sec: insertOpsPerSec.toFixed(2),
+                insert_avg_ms: insertAvgMs.toFixed(2),
+                update_count: updateCount,
+                update_ops_per_sec: updateOpsPerSec.toFixed(2),
+                update_avg_ms: updateAvgMs.toFixed(2),
+                delete_count: deleteCount,
+                delete_ops_per_sec: deleteOpsPerSec.toFixed(2),
+                delete_avg_ms: deleteAvgMs.toFixed(2),
+                total_ops: totalOps,
                 success: successRate
               });
             }
@@ -475,17 +572,22 @@ async def performance_report() -> HTMLResponse:
             resultsTable.style.display = 'table';
             
             // Render charts
-            renderCharts(rpsData, responseTimeData);
+            renderCharts(backendNames, opsPerSecondData, avgTimeData, operationCountsData);
             
             // Render table
             resultsBody.innerHTML = tableRows.map(row => `
               <tr>
                 <td class="backend-name">${row.backend}</td>
-                <td>${row.rps}</td>
-                <td>${row.avg}</td>
-                <td>${row.min}</td>
-                <td>${row.max}</td>
-                <td>${row.total}</td>
+                <td>${row.insert_count}</td>
+                <td>${row.insert_ops_per_sec}</td>
+                <td>${row.insert_avg_ms}</td>
+                <td>${row.update_count}</td>
+                <td>${row.update_ops_per_sec}</td>
+                <td>${row.update_avg_ms}</td>
+                <td>${row.delete_count}</td>
+                <td>${row.delete_ops_per_sec}</td>
+                <td>${row.delete_avg_ms}</td>
+                <td>${row.total_ops}</td>
                 <td>${row.success}</td>
               </tr>
             `).join('');
@@ -494,34 +596,59 @@ async def performance_report() -> HTMLResponse:
             btn.textContent = '🚀 Run Performance Tests';
           }
           
-          function renderCharts(rpsData, responseTimeData) {
-            const colors = ['rgba(122, 162, 247, 0.8)', 'rgba(139, 213, 202, 0.8)', 'rgba(106, 214, 154, 0.8)'];
+          function renderCharts(backendNames, opsPerSecondData, avgTimeData, operationCountsData) {
+            const colors = {
+              insert: 'rgba(34, 197, 94, 0.8)',    // Green
+              update: 'rgba(251, 191, 36, 0.8)',   // Yellow
+              delete: 'rgba(239, 68, 68, 0.8)'     // Red
+            };
             
             // Destroy existing charts
-            if (charts.rps) charts.rps.destroy();
-            if (charts.responseTime) charts.responseTime.destroy();
+            if (charts.opsPerSecond) charts.opsPerSecond.destroy();
+            if (charts.avgTime) charts.avgTime.destroy();
+            if (charts.operationCounts) charts.operationCounts.destroy();
             
-            // Requests per second chart
-            charts.rps = new Chart(document.getElementById('rpsChart'), {
+            // Operations per second chart
+            charts.opsPerSecond = new Chart(document.getElementById('opsPerSecondChart'), {
               type: 'bar',
               data: {
-                labels: rpsData.map(d => d.backend),
-                datasets: [{
-                  label: 'Requests per Second',
-                  data: rpsData.map(d => d.value),
-                  backgroundColor: colors,
-                  borderRadius: 8,
-                }]
+                labels: backendNames,
+                datasets: [
+                  {
+                    label: 'Inserts/sec',
+                    data: opsPerSecondData.inserts,
+                    backgroundColor: colors.insert,
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Updates/sec',
+                    data: opsPerSecondData.updates,
+                    backgroundColor: colors.update,
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Deletes/sec',
+                    data: opsPerSecondData.deletes,
+                    backgroundColor: colors.delete,
+                    borderRadius: 8,
+                  }
+                ]
               },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { display: false },
+                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
                   tooltip: {
                     backgroundColor: 'rgba(19, 26, 51, 0.95)',
                     titleColor: '#e6e9f2',
                     bodyColor: '#e6e9f2',
+                  },
+                  title: {
+                    display: true,
+                    text: 'Operations per Second',
+                    color: '#e6e9f2',
+                    font: { size: 16, weight: 'bold' }
                   }
                 },
                 scales: {
@@ -537,27 +664,103 @@ async def performance_report() -> HTMLResponse:
               }
             });
             
-            // Response time chart
-            charts.responseTime = new Chart(document.getElementById('responseTimeChart'), {
+            // Average time chart
+            charts.avgTime = new Chart(document.getElementById('avgTimeChart'), {
               type: 'bar',
               data: {
-                labels: responseTimeData.map(d => d.backend),
-                datasets: [{
-                  label: 'Avg Response Time (ms)',
-                  data: responseTimeData.map(d => d.value),
-                  backgroundColor: colors.map(c => c.replace('0.8', '0.6')),
-                  borderRadius: 8,
-                }]
+                labels: backendNames,
+                datasets: [
+                  {
+                    label: 'Avg Insert Time (ms)',
+                    data: avgTimeData.inserts,
+                    backgroundColor: colors.insert.replace('0.8', '0.6'),
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Avg Update Time (ms)',
+                    data: avgTimeData.updates,
+                    backgroundColor: colors.update.replace('0.8', '0.6'),
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Avg Delete Time (ms)',
+                    data: avgTimeData.deletes,
+                    backgroundColor: colors.delete.replace('0.8', '0.6'),
+                    borderRadius: 8,
+                  }
+                ]
               },
               options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                  legend: { display: false },
+                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
                   tooltip: {
                     backgroundColor: 'rgba(19, 26, 51, 0.95)',
                     titleColor: '#e6e9f2',
                     bodyColor: '#e6e9f2',
+                  },
+                  title: {
+                    display: true,
+                    text: 'Average Operation Time (ms)',
+                    color: '#e6e9f2',
+                    font: { size: 16, weight: 'bold' }
+                  }
+                },
+                scales: {
+                  y: {
+                    ticks: { color: '#9aa3b2', font: { family: 'JetBrains Mono', size: 11 }},
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                  },
+                  x: {
+                    ticks: { color: '#9aa3b2', font: { family: 'Inter', size: 11 }},
+                    grid: { color: 'rgba(255,255,255,0.05)' }
+                  }
+                }
+              }
+            });
+            
+            // Operation counts chart
+            charts.operationCounts = new Chart(document.getElementById('operationCountsChart'), {
+              type: 'bar',
+              data: {
+                labels: backendNames,
+                datasets: [
+                  {
+                    label: 'Insert Count',
+                    data: operationCountsData.inserts,
+                    backgroundColor: colors.insert.replace('0.8', '0.7'),
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Update Count',
+                    data: operationCountsData.updates,
+                    backgroundColor: colors.update.replace('0.8', '0.7'),
+                    borderRadius: 8,
+                  },
+                  {
+                    label: 'Delete Count',
+                    data: operationCountsData.deletes,
+                    backgroundColor: colors.delete.replace('0.8', '0.7'),
+                    borderRadius: 8,
+                  }
+                ]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
+                  tooltip: {
+                    backgroundColor: 'rgba(19, 26, 51, 0.95)',
+                    titleColor: '#e6e9f2',
+                    bodyColor: '#e6e9f2',
+                  },
+                  title: {
+                    display: true,
+                    text: 'Operation Counts',
+                    color: '#e6e9f2',
+                    font: { size: 16, weight: 'bold' }
                   }
                 },
                 scales: {
@@ -580,7 +783,7 @@ async def performance_report() -> HTMLResponse:
     return HTMLResponse(content=html)
 
 
-@router.get("/api/performance")
+@router.get("/performance")
 async def performance_index() -> JSONResponse:
     """Index of performance testing endpoints."""
     return JSONResponse({

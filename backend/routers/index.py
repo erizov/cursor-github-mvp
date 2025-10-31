@@ -244,6 +244,7 @@ async def root_index(request: Request) -> HTMLResponse:
     nav = "\n".join(
         [
             _link("/api/reports", "📊 All Reports"),
+            _link("/api/performance/report", "⚡ Performance Report"),
             _link("/api/tests/unit.html", "🧪 Unit Tests"),
             _link("/api/tests/e2e.html", "🔬 E2E Tests"),
             _link("/api/tests/pipeline.html", "🚀 Pipeline"),
@@ -685,6 +686,10 @@ async def index_html() -> HTMLResponse:
           <li>
             <a href="/api/reports">📊 All Reports</a>
             <span class="small">View all reports and monitoring pages</span>
+          </li>
+          <li>
+            <a href="/api/performance/report">⚡ Performance Report</a>
+            <span class="small">Compare performance across backends with graphs</span>
           </li>
           <li>
             <a href="/api/tests/unit.html">🧪 Unit Tests</a>
