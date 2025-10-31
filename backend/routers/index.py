@@ -23,20 +23,170 @@ def _html_page(title: str, body: str) -> str:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{title}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-      body {{ font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 2rem; line-height: 1.5; }}
-      h1, h2 {{ margin-top: 1.2rem; }}
-      code, pre {{ background: #f6f8fa; padding: 0.2rem 0.4rem; border-radius: 4px; }}
-      ul {{ padding-left: 1.2rem; }}
-      .small {{ color: #666; font-size: 0.9rem; }}
-      .pill {{ display:inline-block; padding: 0.1rem 0.5rem; border-radius: 999px; background:#eef; color:#225; font-size:0.8rem; margin-left:0.5rem; }}
-      pre {{ white-space: pre-wrap; word-wrap: break-word; max-height: 400px; overflow-y: auto; }}
+      :root {{
+        --bg: #0b1021;
+        --panel: #131a33;
+        --text: #e6e9f2;
+        --muted: #9aa3b2;
+        --accent: #7aa2f7;
+        --accent-2: #8bd5ca;
+        --success: #22c55e;
+        --danger: #ef4444;
+      }}
+      @media (prefers-color-scheme: light) {{
+        :root {{
+          --bg: #f6f7fb;
+          --panel: #ffffff;
+          --text: #0f172a;
+          --muted: #546072;
+          --accent: #3b82f6;
+          --accent-2: #06b6d4;
+          --success: #16a34a;
+          --danger: #dc2626;
+        }}
+      }}
+      * {{ box-sizing: border-box; }}
+      html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
+      body {{ 
+        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
+        line-height: 1.6;
+        padding: 32px;
+      }}
+      h1 {{
+        margin: 0 0 16px;
+        font-weight: 700;
+        font-size: 2.5rem;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }}
+      h2 {{
+        margin: 32px 0 16px;
+        font-weight: 600;
+        font-size: 1.5rem;
+        color: var(--text);
+        padding-bottom: 12px;
+        border-bottom: 2px solid rgba(255,255,255,0.1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }}
+      h2::before {{
+        content: '';
+        width: 4px;
+        height: 24px;
+        background: linear-gradient(180deg, var(--accent), var(--accent-2));
+        border-radius: 2px;
+      }}
+      code {{
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background: rgba(255,255,255,0.08);
+        padding: 0.2rem 0.5rem;
+        border-radius: 6px;
+        color: var(--accent);
+        font-size: 0.9em;
+      }}
+      pre {{
+        background: rgba(255,255,255,0.03);
+        padding: 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        max-height: 400px;
+        overflow-y: auto;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }}
+      ul {{
+        padding-left: 0;
+        list-style: none;
+      }}
+      li {{
+        margin: 12px 0;
+        padding: 16px;
+        background: rgba(255,255,255,0.03);
+        border-radius: 10px;
+        border-left: 3px solid var(--accent);
+        transition: all 0.2s;
+      }}
+      li:hover {{
+        background: rgba(255,255,255,0.06);
+        transform: translateX(4px);
+      }}
+      .small {{
+        color: var(--muted);
+        font-size: 0.875rem;
+        margin-left: 1.5rem;
+        display: block;
+        margin-top: 0.5rem;
+      }}
+      .pill {{
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: linear-gradient(135deg, rgba(122, 162, 247, 0.3), rgba(139, 213, 202, 0.3));
+        color: var(--accent);
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-left: 0.5rem;
+        font-family: 'JetBrains Mono', monospace;
+      }}
+      button {{
+        margin-left: 0.5rem;
+        padding: 0.5rem 1rem;
+        cursor: pointer;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.2s;
+        font-family: 'Inter', sans-serif;
+      }}
+      button:hover {{
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(122, 162, 247, 0.4);
+      }}
+      button:active {{
+        transform: translateY(0);
+      }}
+      a {{
+        color: var(--accent);
+        text-decoration: none;
+        font-weight: 500;
+      }}
+      a:hover {{
+        text-decoration: underline;
+        color: var(--accent-2);
+      }}
+      div[id^="endpoint_"] {{
+        margin-top: 0.5rem;
+        margin-left: 1.5rem;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+        display: none;
+        border: 1px solid rgba(255,255,255,0.1);
+      }}
+      div[id^="endpoint_"] strong {{
+        color: var(--accent);
+        font-weight: 600;
+      }}
     </style>
     <script>
       async function executePost(endpoint, resultId) {{
         const resultDiv = document.getElementById(resultId);
         resultDiv.style.display = 'block';
-        resultDiv.innerHTML = '<em>Executing...</em>';
+        resultDiv.innerHTML = '<em style="color: var(--muted);">Executing...</em>';
         
         try {{
           const response = await fetch(endpoint, {{
@@ -49,7 +199,7 @@ def _html_page(title: str, body: str) -> str:
           const data = await response.json();
           resultDiv.innerHTML = '<strong>Response (' + response.status + '):</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
         }} catch (error) {{
-          resultDiv.innerHTML = '<strong style="color: red;">Error:</strong><pre>' + error.message + '</pre>';
+          resultDiv.innerHTML = '<strong style="color: var(--danger);">Error:</strong><pre>' + error.message + '</pre>';
         }}
       }}
     </script>
@@ -294,9 +444,11 @@ async def api_index(request: Request) -> HTMLResponse:
 """
     
     body = f"""
-      <h1>API Index</h1>
-      <p class="small">Host: {request.url.hostname} • Path: {request.url.path}</p>
-      {groups_html}
+      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
+        <h1>API Index</h1>
+        <p class="small" style="margin: 0 0 24px;">Host: {request.url.hostname} • Path: {request.url.path}</p>
+        {groups_html}
+      </div>
     """
     return HTMLResponse(content=_html_page("API Index", body))
 
