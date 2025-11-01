@@ -243,11 +243,11 @@ def _collect_routes(request: Request) -> list[dict]:
 async def root_index(request: Request) -> HTMLResponse:
     nav = "\n".join(
         [
-            _link("/api/reports", "📊 All Reports"),
+            _link("/reports", "📊 All Reports"),
             _link("/api/performance/report", "⚡ Performance Report"),
-            _link("/api/tests/unit.html", "🧪 Unit Tests"),
-            _link("/api/tests/e2e.html", "🔬 E2E Tests"),
-            _link("/api/tests/pipeline.html", "🚀 Pipeline"),
+            _link("/tests/unit.html", "🧪 Unit Tests"),
+            _link("/tests/e2e.html", "🔬 E2E Tests"),
+            _link("/tests/pipeline.html", "🚀 Pipeline"),
             _link("/api", "📋 API Index"),
             _link("/docs", "📚 Swagger UI", "OpenAPI"),
             _link("/readme", "📖 Project README"),
@@ -271,11 +271,11 @@ async def root_index_json(request: Request) -> JSONResponse:
             "docs": {"swagger": "/docs", "redoc": "/redoc"},
             "help": {
                 "readme": "/readme",
-                "reports": "/api/reports",
+                "reports": "/reports",
                 "monitoring": "/api/monitoring",
-                "run_tests": "/api/tests/run",
-                "unit_tests": "/api/tests/unit",
-                "pipeline_test": "/api/tests/pipeline",
+                "run_tests": "/tests/run",
+                "unit_tests": "/tests/unit",
+                "pipeline_test": "/tests/pipeline",
             },
             "endpoints": routes_sorted,
         }
@@ -302,32 +302,42 @@ async def api_index(request: Request) -> HTMLResponse:
             "endpoints": [
                 {
                     "method": "GET",
-                    "path": "/api/reports",
+                    "path": "/reports",
                     "description": "Reports and monitoring index page (HTML)"
                 },
                 {
                     "method": "GET",
-                    "path": "/api/reports/index.json",
+                    "path": "/reports/index.json",
                     "description": "Reports index with all available endpoints (JSON)"
                 },
                 {
                     "method": "GET",
-                    "path": "/api/reports/usage",
+                    "path": "/reports/usage",
                     "description": "Algorithm usage statistics and counts (JSON)"
                 },
                 {
                     "method": "GET",
-                    "path": "/api/reports/usage.html",
-                    "description": "Usage statistics visualized as a chart (HTML)"
+                    "path": "/reports/usage.html",
+                    "description": "Usage statistics visualized as a chart (HTML, grouped by algorithm type)"
                 },
                 {
                     "method": "GET",
-                    "path": "/api/reports/details",
+                    "path": "/reports/usage/raw",
+                    "description": "Raw algorithm usage statistics showing actual algorithm names without grouping (JSON)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/reports/usage/raw.html",
+                    "description": "Raw usage report with actual algorithm names (not grouped by type) with charts (HTML)"
+                },
+                {
+                    "method": "GET",
+                    "path": "/reports/details",
                     "description": "Detailed report with prompts and timestamps grouped by algorithm (JSON)"
                 },
                 {
                     "method": "GET",
-                    "path": "/api/reports/details.html",
+                    "path": "/reports/details.html",
                     "description": "Detailed report with prompts and timestamps (HTML)"
                 }
             ]
@@ -357,22 +367,22 @@ async def api_index(request: Request) -> HTMLResponse:
             "endpoints": [
                 {
                     "method": "GET",
-                    "path": "/api/tests",
+                    "path": "/tests",
                     "description": "Test endpoints index with descriptions and methods (JSON)"
                 },
                 {
                     "method": "POST",
-                    "path": "/api/tests/run",
+                    "path": "/tests/run",
                     "description": "Run all tests (default: pytest -q tests/)"
                 },
                 {
                     "method": "POST",
-                    "path": "/api/tests/unit",
+                    "path": "/tests/unit",
                     "description": "Run unit tests only (excludes Docker and e2e tests)"
                 },
                 {
                     "method": "POST",
-                    "path": "/api/tests/pipeline",
+                    "path": "/tests/pipeline",
                     "description": "Run end-to-end pipeline test (builds Docker, runs container, verifies endpoints)"
                 }
             ]
@@ -393,7 +403,7 @@ async def api_index(request: Request) -> HTMLResponse:
                 {
                     "method": "POST",
                     "path": "/api/performance/test-all",
-                    "description": "Run performance tests for all backends (inmemory, mongodb, sqlite)"
+                    "description": "Run performance tests for all backends (inmemory, mongodb, postgres, memcached, neo4j, cassandra)"
                 },
                 {
                     "method": "POST",
@@ -493,7 +503,7 @@ def html_escape(s: str) -> str:
     )
 
 
-@router.post("/api/tests/run")
+@router.post("/tests/run")
 async def run_tests(scope: Optional[str] = None) -> JSONResponse:
     """Run pytest and return the textual output and exit status.
 
@@ -532,7 +542,7 @@ async def run_tests(scope: Optional[str] = None) -> JSONResponse:
 
 
 
-@router.post("/api/tests/unit")
+@router.post("/tests/unit")
 async def run_unit_tests() -> JSONResponse:
     """Run unit tests only (excludes Docker and e2e tests)."""
     project_root = Path(__file__).resolve().parents[2]
@@ -571,7 +581,7 @@ async def run_unit_tests() -> JSONResponse:
 
 
 
-@router.post("/api/tests/pipeline")
+@router.post("/tests/pipeline")
 async def run_pipeline_test() -> JSONResponse:
     """Run the e2e pipeline test script (PowerShell)."""
     project_root = Path(__file__).resolve().parents[2]
@@ -684,7 +694,7 @@ async def index_html() -> HTMLResponse:
         <h2>Main Pages</h2>
         <ul>
           <li>
-            <a href="/api/reports">📊 All Reports</a>
+            <a href="/reports">📊 All Reports</a>
             <span class="small">View all reports and monitoring pages</span>
           </li>
           <li>
@@ -692,15 +702,15 @@ async def index_html() -> HTMLResponse:
             <span class="small">Compare performance across backends with graphs</span>
           </li>
           <li>
-            <a href="/api/tests/unit.html">🧪 Unit Tests</a>
+            <a href="/tests/unit.html">🧪 Unit Tests</a>
             <span class="small">Run and view unit test results</span>
           </li>
           <li>
-            <a href="/api/tests/e2e.html">🔬 E2E Tests</a>
+            <a href="/tests/e2e.html">🔬 E2E Tests</a>
             <span class="small">Run and view end-to-end test results</span>
           </li>
           <li>
-            <a href="/api/tests/pipeline.html">🚀 Pipeline</a>
+            <a href="/tests/pipeline.html">🚀 Pipeline</a>
             <span class="small">Run and view pipeline test results</span>
           </li>
         </ul>
@@ -733,14 +743,14 @@ async def styles_css() -> FileResponse:
     return FileResponse(str(path), media_type="text/css")
 
 
-@router.get("/api/tests")
+@router.get("/tests")
 async def tests_index() -> JSONResponse:
     """Index of all test endpoints."""
     return JSONResponse(
         {
             "tests": {
                 "all": {
-                    "endpoint": "/api/tests/run",
+                    "endpoint": "/tests/run",
                     "method": "POST",
                     "description": "Run all tests (default: pytest -q tests/)",
                     "params": {
@@ -748,39 +758,39 @@ async def tests_index() -> JSONResponse:
                     },
                 },
                 "unit": {
-                    "endpoint": "/api/tests/unit",
+                    "endpoint": "/tests/unit",
                     "method": "POST",
                     "description": "Run unit tests only (excludes Docker and e2e)",
                     "command": "pytest -q -k 'not docker and not e2e' tests/",
-                    "html_page": "/api/tests/unit.html",
+                    "html_page": "/tests/unit.html",
                 },
                 "e2e": {
-                    "endpoint": "/api/tests/run",
+                    "endpoint": "/tests/run",
                     "method": "POST",
                     "params": {
                         "scope": "tests/test_e2e.py",
                     },
                     "description": "Run end-to-end tests",
-                    "html_page": "/api/tests/e2e.html",
+                    "html_page": "/tests/e2e.html",
                 },
                 "pipeline": {
-                    "endpoint": "/api/tests/pipeline",
+                    "endpoint": "/tests/pipeline",
                     "method": "POST",
                     "description": "Run e2e pipeline test (builds Docker, runs container, verifies endpoints)",
                     "script": "e2e/pipeline.ps1",
-                    "html_page": "/api/tests/pipeline.html",
+                    "html_page": "/tests/pipeline.html",
                 },
             },
             "links": {
                 "api_index": "/api",
-                "reports": "/api/reports",
+                "reports": "/reports",
                 "monitoring": "/api/monitoring",
             },
         }
     )
 
 
-@router.get("/api/tests/unit.html", response_class=HTMLResponse)
+@router.get("/tests/unit.html", response_class=HTMLResponse)
 async def unit_tests_page() -> HTMLResponse:
     """HTML page for unit tests."""
     body = """
@@ -788,7 +798,7 @@ async def unit_tests_page() -> HTMLResponse:
         <h1>🧪 Unit Tests</h1>
         <p class="small" style="margin: 0 0 32px;">Run unit tests (excludes Docker and e2e tests)</p>
         
-        <button onclick="executePost('/api/tests/unit', 'result_unit')">Run Unit Tests</button>
+        <button onclick="executePost('/tests/unit', 'result_unit')">Run Unit Tests</button>
         <div id="result_unit" style="margin-top: 16px;"></div>
         
         <h2>Test Information</h2>
@@ -797,7 +807,7 @@ async def unit_tests_page() -> HTMLResponse:
             <strong>Command:</strong> <code>pytest -q -k 'not docker and not e2e' tests/</code>
           </li>
           <li>
-            <strong>Endpoint:</strong> <code>POST /api/tests/unit</code>
+            <strong>Endpoint:</strong> <code>POST /tests/unit</code>
           </li>
           <li>
             <strong>Description:</strong> Runs unit tests only, excluding Docker and e2e tests
@@ -806,16 +816,16 @@ async def unit_tests_page() -> HTMLResponse:
         
         <p style="margin-top: 32px;">
           <a href="/index.html">← Back to Home</a> | 
-          <a href="/api/reports">View Reports</a> | 
-          <a href="/api/tests/e2e.html">E2E Tests</a> | 
-          <a href="/api/tests/pipeline.html">Pipeline Tests</a>
+          <a href="/reports">View Reports</a> | 
+          <a href="/tests/e2e.html">E2E Tests</a> | 
+          <a href="/tests/pipeline.html">Pipeline Tests</a>
         </p>
       </div>
     """
     return HTMLResponse(content=_html_page("Unit Tests", body))
 
 
-@router.get("/api/tests/e2e.html", response_class=HTMLResponse)
+@router.get("/tests/e2e.html", response_class=HTMLResponse)
 async def e2e_tests_page() -> HTMLResponse:
     """HTML page for e2e tests."""
     body = """
@@ -823,13 +833,13 @@ async def e2e_tests_page() -> HTMLResponse:
         <h1>🔄 E2E Tests</h1>
         <p class="small" style="margin: 0 0 32px;">Run end-to-end tests</p>
         
-        <button onclick="executePost('/api/tests/run?scope=tests/test_e2e.py', 'result_e2e')">Run E2E Tests</button>
+        <button onclick="executePost('/tests/run?scope=tests/test_e2e.py', 'result_e2e')">Run E2E Tests</button>
         <div id="result_e2e" style="margin-top: 16px;"></div>
         
         <h2>Test Information</h2>
         <ul>
           <li>
-            <strong>Endpoint:</strong> <code>POST /api/tests/run?scope=tests/test_e2e.py</code>
+            <strong>Endpoint:</strong> <code>POST /tests/run?scope=tests/test_e2e.py</code>
           </li>
           <li>
             <strong>Description:</strong> Runs end-to-end tests to verify the full application workflow
@@ -838,16 +848,16 @@ async def e2e_tests_page() -> HTMLResponse:
         
         <p style="margin-top: 32px;">
           <a href="/index.html">← Back to Home</a> | 
-          <a href="/api/reports">View Reports</a> | 
-          <a href="/api/tests/unit.html">Unit Tests</a> | 
-          <a href="/api/tests/pipeline.html">Pipeline Tests</a>
+          <a href="/reports">View Reports</a> | 
+          <a href="/tests/unit.html">Unit Tests</a> | 
+          <a href="/tests/pipeline.html">Pipeline Tests</a>
         </p>
       </div>
     """
     return HTMLResponse(content=_html_page("E2E Tests", body))
 
 
-@router.get("/api/tests/pipeline.html", response_class=HTMLResponse)
+@router.get("/tests/pipeline.html", response_class=HTMLResponse)
 async def pipeline_tests_page() -> HTMLResponse:
     """HTML page for pipeline tests."""
     body = """
@@ -855,13 +865,13 @@ async def pipeline_tests_page() -> HTMLResponse:
         <h1>🚀 Pipeline Tests</h1>
         <p class="small" style="margin: 0 0 32px;">Run end-to-end pipeline test (builds Docker, runs container, verifies endpoints)</p>
         
-        <button onclick="executePost('/api/tests/pipeline', 'result_pipeline')">Run Pipeline Test</button>
+        <button onclick="executePost('/tests/pipeline', 'result_pipeline')">Run Pipeline Test</button>
         <div id="result_pipeline" style="margin-top: 16px;"></div>
         
         <h2>Test Information</h2>
         <ul>
           <li>
-            <strong>Endpoint:</strong> <code>POST /api/tests/pipeline</code>
+            <strong>Endpoint:</strong> <code>POST /tests/pipeline</code>
           </li>
           <li>
             <strong>Script:</strong> <code>e2e/pipeline.ps1</code>
@@ -873,9 +883,9 @@ async def pipeline_tests_page() -> HTMLResponse:
         
         <p style="margin-top: 32px;">
           <a href="/index.html">← Back to Home</a> | 
-          <a href="/api/reports">View Reports</a> | 
-          <a href="/api/tests/unit.html">Unit Tests</a> | 
-          <a href="/api/tests/e2e.html">E2E Tests</a>
+          <a href="/reports">View Reports</a> | 
+          <a href="/tests/unit.html">Unit Tests</a> | 
+          <a href="/tests/e2e.html">E2E Tests</a>
         </p>
       </div>
     """
@@ -901,7 +911,7 @@ async def monitoring_index() -> JSONResponse:
             "links": {
                 "prometheus_text": "/metrics",
                 "prometheus_html": "/metrics.html",
-                "reports": "/api/reports",
+                "reports": "/reports",
                 "api_index": "/api",
             },
         }
