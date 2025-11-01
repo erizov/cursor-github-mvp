@@ -1,0 +1,338 @@
+AI Algorithm Teacher - Complete Project Generation Prompt
+============================================================
+
+PROJECT OVERVIEW
+----------------
+AI Algorithm Teacher is a rules-based FastAPI service that recommends AI/ML 
+algorithms from natural-language descriptions. The default implementation uses 
+in-memory storage for simplicity, but supports multiple database backends 
+(MongoDB, PostgreSQL, Memcached, Neo4j, Cassandra) via environment 
+configuration.
+
+Key Features:
+- Rule-based algorithm recommendation engine
+- Usage tracking and analytics with HTML/JSON reports
+- Performance testing across multiple backends
+- Prometheus metrics integration
+- Automated weekly prompt fetching from internet sources
+- Modern, responsive HTML UI with dark/light theme support
+- Comprehensive test suite (unit, e2e, metrics, Docker)
+
+TECHNOLOGY STACK
+----------------
+- Python 3.11+
+- FastAPI 0.115.5
+- Uvicorn (with standard extras)
+- Structlog 24.4.0 for structured logging
+- Prometheus client libraries
+- Multiple database drivers (motor, asyncpg, aiomcache, neo4j, cassandra-driver)
+- Chart.js 4.4.0 for data visualization
+- Pytest 8.3.3 for testing
+
+PROJECT STRUCTURE
+-----------------
+backend/
+  __init__.py
+  app.py                    # FastAPI app factory, router mounting, middleware
+  db.py                     # Database connection helpers (Mongo, Postgres, etc.)
+  html_styles.py            # Shared CSS styles and font links for HTML pages
+  logging_config.py         # Structlog configuration
+  models.py                 # Pydantic models (RecommendRequest, RecommendResponse, etc.)
+  monitoring.py             # Prometheus metrics definitions
+  repositories.py           # Repository pattern implementations for all backends
+  services.py               # RecommendationService with algorithm mapping logic
+  routers/
+    __init__.py
+    index.py                # Root routes (/), API index, test endpoints
+    recommendations.py      # POST /api/recommend endpoint
+    reports.py              # All report routes (usage, raw, details, performance)
+    performance.py          # Performance testing routes and HTML generation
+
+frontend/
+  index.html                # Minimal usage chart UI
+  styles.css                # Additional frontend styles
+
+tests/
+  conftest.py               # Pytest fixtures
+  test_api.py               # API endpoint tests
+  test_e2e.py               # End-to-end integration tests
+  test_metrics.py           # Prometheus metrics tests
+  test_docker.py            # Docker build and container tests
+
+scripts/
+  fetch_prompts_from_internet.py  # Weekly prompt fetching automation
+  generate_prompts.py              # Generate prompts.txt file
+  performance_test.py              # Performance testing utilities
+  setup_cron.ps1 / setup_cron.sh   # Cron job setup scripts
+  (various other utility scripts)
+
+deployment/
+  Dockerfile                # Production Dockerfile
+  Dockerfile.dev            # Development Dockerfile
+  Dockerfile.*              # Backend-specific Dockerfiles (mongodb, postgres, etc.)
+
+docker-compose.yml          # Multi-backend database services
+requirements.txt            # Python dependencies
+start_server.bat / .ps1     # Windows startup scripts
+
+CODING CONVENTIONS
+------------------
+Strict PEP 8 compliance:
+- UTF-8 encoding, 4 spaces (no tabs), max line length 79 characters
+- Two blank lines between top-level declarations
+- One blank line between methods inside classes
+- Imports: stdlib → third-party → local, one per line
+- Naming: snake_case (modules/functions/vars), CapWords (classes), 
+  UPPER_SNAKE_CASE (constants), leading underscore for private
+- Type hints required for public functions/methods and return values
+- No bare `except:`, avoid mutable defaults
+- Use logger instead of print in server code
+- Docstrings follow PEP 257 (triple quotes, summary line)
+
+ARCHITECTURE PATTERNS
+---------------------
+1. Repository Pattern: Protocol-based interface (SelectionRepository, 
+   UniqueRequestRepository) with multiple implementations:
+   - InMemorySelectionRepository (singleton, default)
+   - MongoSelectionRepository
+   - PostgresSelectionRepository
+   - MemcachedSelectionRepository
+   - Neo4jSelectionRepository
+   - CassandraSelectionRepository
+
+2. Dependency Injection: FastAPI Depends() for service and repository 
+   instantiation based on BACKEND_TYPE environment variable
+
+3. Service Layer: RecommendationService encapsulates business logic, 
+   delegates persistence to repositories
+
+4. Router Modules: Each router handles a specific domain (recommendations, 
+   reports, performance, index)
+
+5. Shared CSS: Centralized styling in backend/html_styles.py with 
+   get_common_styles() and get_font_links() functions
+
+API ENDPOINTS
+-------------
+Root & Index:
+  GET  /                    # Home page with navigation
+  GET  /index.json          # JSON listing of all endpoints
+  GET  /api                 # API index page (HTML)
+
+Recommendations:
+  POST /api/recommend       # Get algorithm recommendations (body: {prompt: str})
+
+Reports (all in backend/routers/reports.py):
+  GET  /reports             # Reports index page (HTML)
+  GET  /reports/index.json  # Reports endpoints listing (JSON)
+  GET  /reports/usage       # Usage statistics (JSON)
+  GET  /reports/usage.html  # Usage chart - grouped by algorithm type (HTML)
+  GET  /reports/usage/raw   # Raw usage statistics - actual algorithm names (JSON)
+  GET  /reports/usage/raw.html  # Raw usage report - top 25, excludes "Other" (HTML)
+  GET  /reports/details     # Detailed report grouped by algorithm (JSON)
+  GET  /reports/details.html    # Detailed HTML report
+  GET  /reports/performance.html  # Performance report with charts (HTML)
+
+Performance (backend/routers/performance.py):
+  GET  /api/performance                # Performance endpoints index (JSON)
+  POST /api/performance/test-all       # Test all backends with configurable requests
+  POST /api/performance/test           # Test specific backend
+
+Tests (backend/routers/index.py):
+  GET  /tests                  # Test endpoints index (JSON)
+  GET  /tests/unit.html        # Unit tests page (HTML)
+  GET  /tests/e2e.html         # E2E tests page (HTML)
+  GET  /tests/pipeline.html    # Pipeline tests page (HTML)
+  POST /tests/run              # Run all tests
+  POST /tests/unit             # Run unit tests only
+  POST /tests/pipeline         # Run e2e pipeline test
+
+Monitoring:
+  GET  /metrics                # Prometheus metrics (text/plain)
+  GET  /metrics.html           # Prometheus metrics (HTML table)
+
+Cleanup:
+  POST /api/cleanup/images?age_minutes=30  # Clean old Docker images
+
+DOCUMENTATION:
+  GET  /docs                   # Swagger UI
+  GET  /redoc                  # ReDoc documentation
+
+DATABASE BACKENDS
+-----------------
+Controlled via BACKEND_TYPE environment variable:
+- "inmemory" (default): Singleton in-memory repository, no external DB
+- "mongodb": MongoDB via motor driver (MONGODB_URI, MONGODB_DB env vars)
+- "postgres"/"postgresql": PostgreSQL via asyncpg (POSTGRES_URI env var)
+- "memcached": Memcached via aiomcache (MEMCACHED_HOST, MEMCACHED_PORT)
+- "neo4j": Neo4j via neo4j driver (NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
+- "cassandra": Cassandra via cassandra-driver (CASSANDRA_HOSTS env var)
+
+All repositories implement the same Protocol interface, allowing seamless 
+switching between backends.
+
+HTML GENERATION PATTERNS
+------------------------
+All HTML pages use consistent structure:
+1. Import get_font_links() and get_common_styles() from backend.html_styles
+2. Use f-strings for template generation
+3. Escape JavaScript/CSS braces in f-strings: {{ }} for literal braces, 
+   ${variable} for template literals (single brace)
+4. Apply CSS classes instead of inline styles where possible
+5. Include navigation links in .nav div with consistent styling
+6. Use Chart.js for data visualization with dark theme colors
+7. Ensure text wrapping with CSS: word-wrap, word-break, overflow-wrap
+
+Example pattern:
+```python
+from backend.html_styles import get_font_links, get_common_styles
+
+def _html_page(title: str, body: str) -> str:
+    font_links = get_font_links()
+    common_styles = get_common_styles()
+    return f"""
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <title>{title}</title>
+        {font_links}
+        {common_styles}
+      </head>
+      <body>
+        {body}
+      </body>
+    </html>
+    """
+```
+
+RECOMMENDATION LOGIC
+--------------------
+Located in backend/services.py and ai_algorithm_teacher.py:
+- build_recommendations(prompt: str) returns list of Recommendation objects
+- Rules-based matching on keywords in prompt (classification, regression, 
+  clustering, time series, interpretability, data size, latency, etc.)
+- Returns algorithms with scores, rationales, pros/cons, typical steps, 
+  resources
+- Algorithm type categorization via get_algorithm_type_from_algorithm()
+- Top recommendation is persisted via repository.add_selection()
+
+REPORTING FEATURES
+------------------
+1. Usage Report (grouped): Groups algorithms by type (Classification, 
+   Regression, etc.), shows top 25 with charts
+2. Raw Usage Report: Shows actual algorithm names (not grouped), top 25, 
+   excludes "Other"
+3. Details Report: Groups by algorithm with individual prompt examples
+4. Performance Report: Interactive page with Chart.js visualizations, 
+   compares all backends across inserts/updates/deletes operations
+
+All reports support both JSON and HTML formats.
+
+LOGGING & MONITORING
+--------------------
+- Structured logging via structlog (backend/logging_config.py)
+- Log format: JSON with fields (method, path, status_code, client, etc.)
+- Prometheus metrics:
+  - recommendations_total (counter)
+  - algorithm_top_selections_total{algorithm="..."} (counter)
+  - Standard FastAPI metrics via prometheus-fastapi-instrumentator
+
+RUNNING THE APPLICATION
+-----------------------
+Development (in-memory backend):
+  $env:BACKEND_TYPE='inmemory'
+  python -m uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
+
+Or use startup scripts:
+  Windows: .\start_server.bat or .\start_server.ps1
+
+With MongoDB:
+  docker-compose up -d mongo
+  $env:BACKEND_TYPE='mongodb'
+  $env:MONGODB_URI='mongodb://localhost:27017'
+  $env:MONGODB_DB='ai_algo_teacher'
+  python -m uvicorn backend.app:app --reload
+
+All databases via Docker Compose:
+  docker-compose up
+
+TESTING
+-------
+All tests:
+  pytest -q tests/
+
+Unit tests only (excludes Docker and e2e):
+  pytest -q tests/ -k "not docker and not e2e"
+
+Via API endpoints:
+  POST /tests/run       # All tests
+  POST /tests/unit      # Unit tests only
+  POST /tests/pipeline  # E2E pipeline test
+
+Test files:
+- tests/test_api.py: API endpoint tests
+- tests/test_e2e.py: End-to-end integration tests
+- tests/test_metrics.py: Prometheus metrics validation
+- tests/test_docker.py: Docker build and container verification
+
+DEPLOYMENT
+----------
+Production Docker build:
+  docker build -t algorithm-teacher .
+
+Run container:
+  docker run -p 8000:8000 algorithm-teacher
+
+Backend-specific Dockerfiles available in deployment/ directory for each 
+database backend.
+
+WEEKLY PROMPT UPDATES
+---------------------
+Automated system fetches AI/ML prompts from internet sources (Stack Overflow, 
+etc.) on a weekly basis. Prompts are added to prompts.txt with max limit of 
+30,000.
+
+Setup (Windows as Administrator):
+  .\scripts\setup_cron.ps1
+
+Setup (Linux/macOS):
+  chmod +x scripts/setup_cron.sh && ./scripts/setup_cron.sh
+
+KEY FILES TO UNDERSTAND
+-----------------------
+1. backend/app.py: Application factory, router mounting, middleware
+2. backend/repositories.py: All repository implementations and Protocol 
+   definitions
+3. backend/services.py: RecommendationService and algorithm type mapping
+4. backend/routers/reports.py: All report generation logic (JSON and HTML)
+5. backend/routers/performance.py: Performance testing and HTML generation
+6. backend/html_styles.py: Centralized CSS styling
+7. ai_algorithm_teacher.py: Core recommendation rules engine
+8. backend/models.py: All Pydantic models
+
+IMPORTANT PATTERNS TO FOLLOW
+-----------------------------
+1. Use type hints for all public functions
+2. Follow PEP 8 strictly (79 char line limit, 4 spaces, etc.)
+3. Use structured logging (get_logger()) instead of print
+4. HTML generation: use f-strings with proper brace escaping
+5. Repository pattern: implement Protocol interface for new backends
+6. CSS: prefer classes from get_common_styles() over inline styles
+7. Error handling: specific exceptions, no bare except
+8. Tests: keep deterministic, use pytest fixtures from conftest.py
+
+COMMON PITFALLS TO AVOID
+-------------------------
+1. Unescaped braces in f-string HTML templates (use {{ }} for literal braces)
+2. Mixing inline styles with CSS classes (prefer classes)
+3. Forgetting to set BACKEND_TYPE environment variable (defaults to inmemory)
+4. Hardcoding database connection strings (use environment variables)
+5. Not handling repository Protocol interface correctly when adding new backends
+6. Missing type hints on public functions
+7. Line length exceeding 79 characters
+8. Using print() instead of logger in backend code
+
+This prompt should enable complete regeneration or full understanding of the 
+AI Algorithm Teacher project structure, architecture, and conventions.
+
