@@ -9,6 +9,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, JSONResponse, FileResponse
 from prometheus_client import generate_latest, CollectorRegistry
 from fastapi.routing import APIRoute
+from backend.html_styles import get_common_styles, get_font_links
 
 
 router = APIRouter(tags=["index"])
@@ -23,165 +24,8 @@ def _html_page(title: str, body: str) -> str:
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{title}</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-      :root {{
-        --bg: #0b1021;
-        --panel: #131a33;
-        --text: #e6e9f2;
-        --muted: #9aa3b2;
-        --accent: #7aa2f7;
-        --accent-2: #8bd5ca;
-        --success: #22c55e;
-        --danger: #ef4444;
-      }}
-      @media (prefers-color-scheme: light) {{
-        :root {{
-          --bg: #f6f7fb;
-          --panel: #ffffff;
-          --text: #0f172a;
-          --muted: #546072;
-          --accent: #3b82f6;
-          --accent-2: #06b6d4;
-          --success: #16a34a;
-          --danger: #dc2626;
-        }}
-      }}
-      * {{ box-sizing: border-box; }}
-      html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
-      body {{ 
-        font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
-        line-height: 1.6;
-        padding: 32px;
-      }}
-      h1 {{
-        margin: 0 0 16px;
-        font-weight: 700;
-        font-size: 2.5rem;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }}
-      h2 {{
-        margin: 32px 0 16px;
-        font-weight: 600;
-        font-size: 1.5rem;
-        color: var(--text);
-        padding-bottom: 12px;
-        border-bottom: 2px solid rgba(255,255,255,0.1);
-        display: flex;
-        align-items: center;
-        gap: 12px;
-      }}
-      h2::before {{
-        content: '';
-        width: 4px;
-        height: 24px;
-        background: linear-gradient(180deg, var(--accent), var(--accent-2));
-        border-radius: 2px;
-      }}
-      code {{
-        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        background: rgba(255,255,255,0.08);
-        padding: 0.2rem 0.5rem;
-        border-radius: 6px;
-        color: var(--accent);
-        font-size: 0.9em;
-      }}
-      pre {{
-        background: rgba(255,255,255,0.03);
-        padding: 16px;
-        border-radius: 8px;
-        border: 1px solid rgba(255,255,255,0.1);
-        overflow-x: auto;
-        white-space: pre-wrap;
-        word-wrap: break-word;
-        max-height: 400px;
-        overflow-y: auto;
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 0.875rem;
-        line-height: 1.5;
-      }}
-      ul {{
-        padding-left: 0;
-        list-style: none;
-      }}
-      li {{
-        margin: 12px 0;
-        padding: 16px;
-        background: rgba(255,255,255,0.03);
-        border-radius: 10px;
-        border-left: 3px solid var(--accent);
-        transition: all 0.2s;
-      }}
-      li:hover {{
-        background: rgba(255,255,255,0.06);
-        transform: translateX(4px);
-      }}
-      .small {{
-        color: var(--muted);
-        font-size: 0.875rem;
-        margin-left: 1.5rem;
-        display: block;
-        margin-top: 0.5rem;
-      }}
-      .pill {{
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 999px;
-        background: linear-gradient(135deg, rgba(122, 162, 247, 0.3), rgba(139, 213, 202, 0.3));
-        color: var(--accent);
-        font-size: 0.75rem;
-        font-weight: 600;
-        margin-left: 0.5rem;
-        font-family: 'JetBrains Mono', monospace;
-      }}
-      button {{
-        margin-left: 0.5rem;
-        padding: 0.5rem 1rem;
-        cursor: pointer;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        font-weight: 600;
-        transition: all 0.2s;
-        font-family: 'Inter', sans-serif;
-      }}
-      button:hover {{
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(122, 162, 247, 0.4);
-      }}
-      button:active {{
-        transform: translateY(0);
-      }}
-      a {{
-        color: var(--accent);
-        text-decoration: none;
-        font-weight: 500;
-      }}
-      a:hover {{
-        text-decoration: underline;
-        color: var(--accent-2);
-      }}
-      div[id^="endpoint_"] {{
-        margin-top: 0.5rem;
-        margin-left: 1.5rem;
-        padding: 12px;
-        background: rgba(255,255,255,0.05);
-        border-radius: 8px;
-        display: none;
-        border: 1px solid rgba(255,255,255,0.1);
-      }}
-      div[id^="endpoint_"] strong {{
-        color: var(--accent);
-        font-weight: 600;
-      }}
-    </style>
+    {get_font_links()}
+    {get_common_styles()}
     <script>
       async function executePost(endpoint, resultId) {{
         const resultDiv = document.getElementById(resultId);
@@ -702,9 +546,9 @@ async def cleanup_old_images_endpoint(age_minutes: Optional[int] = 15) -> JSONRe
 async def index_html() -> HTMLResponse:
     """Home page with links to API and endpoints."""
     body = """
-      <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
-        <h1>AI Algorithm Teacher</h1>
-        <p class="small" style="margin: 0 0 32px; font-size: 1.125rem;">Algorithm recommendation API with analytics and monitoring</p>
+      <div class="wrap">
+        <h1 class="large">AI Algorithm Teacher</h1>
+        <div class="subtitle">Algorithm recommendation API with analytics and monitoring</div>
         
         <h2>Main Pages</h2>
         <ul>
@@ -977,6 +821,8 @@ async def metrics_html() -> HTMLResponse:
         for r in rows_sorted
     )
 
+    font_links = get_font_links()
+    common_styles = get_common_styles()
     html = f"""
 <!doctype html>
 <html lang="en">
@@ -984,23 +830,12 @@ async def metrics_html() -> HTMLResponse:
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Metrics</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    {font_links}
+    {common_styles}
     <style>
-      :root {{ --bg:#0b1021; --panel:#131a33; --text:#e6e9f2; --muted:#9aa3b2; --accent:#7aa2f7; }}
-      html, body {{ margin:0; padding:0; background:var(--bg); color:var(--text); }}
-      body {{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }}
-      .wrap {{ max-width: 960px; margin: 32px auto; padding: 24px; background: var(--panel); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }}
-      h1 {{ margin: 0 0 8px; font-weight: 600; }}
-      .sub {{ color: var(--muted); margin-bottom: 16px; }}
-      table {{ width: 100%; border-collapse: collapse; }}
-      th, td {{ padding: 10px 12px; text-align: left; }}
-      thead th {{ color: var(--muted); font-size: 14px; border-bottom: 1px solid rgba(255,255,255,.08); }}
-      tbody tr:hover {{ background: rgba(122,162,247,.08); }}
-      td.num {{ font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }}
+      .wrap {{ max-width: 960px; }}
+      .sub {{ margin-bottom: 16px; }}
       .nav {{ margin-bottom: 16px; }}
-      .nav a {{ color: var(--accent); text-decoration: none; margin-right: 12px; }}
     </style>
   </head>
   <body>

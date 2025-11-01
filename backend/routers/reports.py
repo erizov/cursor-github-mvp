@@ -22,6 +22,7 @@ from backend.db import (
     get_neo4j_driver, get_cassandra_session
 )
 from backend.services import get_algorithm_type_from_algorithm
+from backend.html_styles import get_common_styles, get_font_links
 
 
 router = APIRouter(tags=["reports"])
@@ -194,56 +195,9 @@ async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> 
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Raw Usage Report</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+        {get_font_links()}
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-        <style>
-          :root {{
-            --bg: #0b1021;
-            --panel: #131a33;
-            --text: #e6e9f2;
-            --muted: #9aa3b2;
-            --accent: #7aa2f7;
-            --accent-2: #8bd5ca;
-            --good: #6ad69a;
-            --warning: #fbbf24;
-            --danger: #ef4444;
-          }}
-          @media (prefers-color-scheme: light) {{
-            :root {{
-              --bg: #f6f7fb; --panel: #ffffff; --text: #0f172a; --muted: #546072;
-              --accent: #3b82f6; --accent-2: #06b6d4; --good: #16a34a;
-              --warning: #f59e0b; --danger: #dc2626;
-            }}
-          }}
-          html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
-          body {{ font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; }}
-          .wrap {{ max-width: 1200px; margin: 32px auto; padding: 32px; background: var(--panel); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }}
-          h1 {{ margin: 0 0 8px; font-weight: 700; font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }}
-          .sub {{ color: var(--muted); margin-bottom: 24px; font-size: 1rem; }}
-          .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }}
-          .statbox {{ padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 1px solid rgba(122, 162, 247, 0.2); }}
-          .statbox .label {{ color: var(--muted); font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; }}
-          .statbox .value {{ font-weight: 700; font-size: 2rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; }}
-          .charts-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px; }}
-          .chart-container {{ position: relative; height: 300px; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; }}
-          table {{ width: 100%; border-collapse: collapse; margin-top: 24px; }}
-          th, td {{ padding: 14px 16px; text-align: left; }}
-          thead th {{ color: var(--muted); font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid rgba(255,255,255,.1); }}
-          tbody tr {{ border-bottom: 1px solid rgba(255,255,255,.05); transition: all 0.2s; }}
-          tbody tr:hover {{ background: rgba(122,162,247,.1); transform: translateX(4px); }}
-          td.alg {{ font-weight: 600; color: var(--text); }}
-          td.num {{ font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: var(--accent); }}
-          td.bar {{ width: 200px; }}
-          td.bar .barbg {{ height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }}
-          td.bar .barfill {{ height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 0.3s ease; }}
-          .nav {{ margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap; }}
-          .nav a {{ color: var(--accent); text-decoration: none; padding: 8px 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); transition: all 0.2s; font-weight: 500; }}
-          .nav a:hover {{ background: rgba(122, 162, 247, 0.2); transform: translateY(-2px); }}
-          .empty {{ background: rgba(255,255,255,.04); border: 2px dashed rgba(255,255,255,.18); padding: 24px; border-radius: 12px; margin-bottom: 16px; text-align: center; }}
-          .info-badge {{ display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(251, 191, 36, 0.2); color: var(--warning); font-size: 0.75rem; font-weight: 600; margin-left: 12px; }}
-        </style>
+        {get_common_styles()}
       </head>
       <body>
         <div class="wrap">
@@ -270,7 +224,7 @@ async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> 
             </div>
             <div class="statbox">
               <div class="label">Top Algorithm</div>
-              <div class="value" style="font-size: 1.25rem; color: var(--accent-2);">{counts[0]['algorithm'] if counts else 'N/A'}</div>
+              <div class="value small">{counts[0]['algorithm'] if counts else 'N/A'}</div>
             </div>
           </div>
           {_get_empty_state_html() if not total else ""}
@@ -289,7 +243,7 @@ async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> 
               <tr><th>Algorithm</th><th>Count</th><th>Percent</th><th>Share</th></tr>
             </thead>
             <tbody>
-              {(''.join(rows)) if total else '<tr><td colspan="4" style="color: var(--muted); text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
+              {(''.join(rows)) if total else '<tr><td colspan="4" class="num" style="text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -469,56 +423,9 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Usage Report</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+        {get_font_links()}
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-        <style>
-          :root {{
-            --bg: #0b1021;
-            --panel: #131a33;
-            --text: #e6e9f2;
-            --muted: #9aa3b2;
-            --accent: #7aa2f7;
-            --accent-2: #8bd5ca;
-            --good: #6ad69a;
-            --warning: #fbbf24;
-            --danger: #ef4444;
-          }}
-          @media (prefers-color-scheme: light) {{
-            :root {{
-              --bg: #f6f7fb; --panel: #ffffff; --text: #0f172a; --muted: #546072;
-              --accent: #3b82f6; --accent-2: #06b6d4; --good: #16a34a;
-              --warning: #f59e0b; --danger: #dc2626;
-            }}
-          }}
-          html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
-          body {{ font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; }}
-          .wrap {{ max-width: 1200px; margin: 32px auto; padding: 32px; background: var(--panel); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }}
-          h1 {{ margin: 0 0 8px; font-weight: 700; font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }}
-          .sub {{ color: var(--muted); margin-bottom: 24px; font-size: 1rem; }}
-          .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }}
-          .statbox {{ padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 1px solid rgba(122, 162, 247, 0.2); }}
-          .statbox .label {{ color: var(--muted); font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; }}
-          .statbox .value {{ font-weight: 700; font-size: 2rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; }}
-          .charts-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px; }}
-          .chart-container {{ position: relative; height: 300px; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; }}
-          table {{ width: 100%; border-collapse: collapse; margin-top: 24px; }}
-          th, td {{ padding: 14px 16px; text-align: left; }}
-          thead th {{ color: var(--muted); font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid rgba(255,255,255,.1); }}
-          tbody tr {{ border-bottom: 1px solid rgba(255,255,255,.05); transition: all 0.2s; }}
-          tbody tr:hover {{ background: rgba(122,162,247,.1); transform: translateX(4px); }}
-          td.alg {{ font-weight: 600; color: var(--text); }}
-          td.num {{ font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: var(--accent); }}
-          td.bar {{ width: 200px; }}
-          td.bar .barbg {{ height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }}
-          td.bar .barfill {{ height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 0.3s ease; }}
-          .nav {{ margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap; }}
-          .nav a {{ color: var(--accent); text-decoration: none; padding: 8px 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); transition: all 0.2s; font-weight: 500; }}
-          .nav a:hover {{ background: rgba(122, 162, 247, 0.2); transform: translateY(-2px); }}
-          .empty {{ background: rgba(255,255,255,.04); border: 2px dashed rgba(255,255,255,.18); padding: 24px; border-radius: 12px; margin-bottom: 16px; text-align: center; }}
-          .pill {{ display:inline-block; padding: 4px 12px; border-radius: 999px; background:linear-gradient(135deg, rgba(122, 162, 247, 0.3), rgba(139, 213, 202, 0.3)); color:var(--accent); font-size:0.75rem; font-weight: 600; margin-left:8px; }}
-        </style>
+        {get_common_styles()}
       </head>
       <body>
         <div class="wrap">
@@ -532,18 +439,18 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <a href="/reports/usage/raw.html">📋 Raw Report</a>
             <a href="/reports/details.html">📑 Details</a>
             <a href="/reports/performance">⚡ Performance</a>
-            <select id="seedCount" style="padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.875rem; cursor: pointer;">
+            <select id="seedCount" class="control-select">
               <option value="10">10 prompts</option>
               <option value="50">50 prompts</option>
               <option value="100" selected>100 prompts</option>
               <option value="500">500 prompts</option>
               <option value="1000">1,000 prompts</option>
             </select>
-            <button onclick="seedDemoData()" id="seedBtn" style="margin-left: 8px; padding: 8px 16px; cursor: pointer; background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: white; border: none; border-radius: 8px; font-size: 0.875rem; font-weight: 600; transition: all 0.2s; font-family: 'Inter', sans-serif;">🌱 Seed Demo Data</button>
+            <button onclick="seedDemoData()" id="seedBtn" class="control-button">🌱 Seed Demo Data</button>
           </div>
           <h1>Usage Report</h1>
           <div class="sub">Algorithm usage statistics and visualizations</div>
-          <div id="seedStatus" style="display: none; padding: 12px; margin-bottom: 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); border: 1px solid rgba(122, 162, 247, 0.3);"></div>
+          <div id="seedStatus" class="status-box"></div>
           <div class="stats-grid">
             <div class="statbox">
               <div class="label">Total Selections</div>
@@ -555,7 +462,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             </div>
             <div class="statbox">
               <div class="label">Top Algorithm</div>
-              <div class="value" style="font-size: 1.25rem; color: var(--accent-2);">{counts[0]['algorithm'] if counts else 'N/A'}</div>
+              <div class="value small">{counts[0]['algorithm'] if counts else 'N/A'}</div>
             </div>
           </div>
           {_get_empty_state_html() if not total else ""}
@@ -574,7 +481,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
               <tr><th>Algorithm</th><th>Count</th><th>Percent</th><th>Share</th></tr>
             </thead>
             <tbody>
-              {(''.join(rows)) if total else '<tr><td colspan="4" style="color: var(--muted); text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
+              {(''.join(rows)) if total else '<tr><td colspan="4" class="num" style="text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
             </tbody>
           </table>
         </div>
@@ -813,213 +720,47 @@ async def reports_index(request: Request) -> HTMLResponse:
     """Index page listing all available reports and monitoring endpoints."""
     from fastapi.responses import HTMLResponse as HTMLResp
     
-    html = """
+    font_links = get_font_links()
+    common_styles = get_common_styles()
+    html = f"""
     <!doctype html>
     <html lang="en">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Reports & Monitoring</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-        <style>
-          :root {
-            --bg: #0b1021;
-            --panel: #131a33;
-            --text: #e6e9f2;
-            --muted: #9aa3b2;
-            --accent: #7aa2f7;
-            --accent-2: #8bd5ca;
-            --success: #22c55e;
-            --info: #3b82f6;
-          }
-          @media (prefers-color-scheme: light) {
-            :root {
-              --bg: #f6f7fb;
-              --panel: #ffffff;
-              --text: #0f172a;
-              --muted: #546072;
-              --accent: #3b82f6;
-              --accent-2: #06b6d4;
-              --success: #16a34a;
-              --info: #2563eb;
-            }
-          }
-          * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
-          body { 
-            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; 
-            line-height: 1.6;
-            padding: 32px;
-          }
-          .wrap {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: var(--panel);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.3);
-          }
-          h1 {
-            margin: 0 0 8px;
-            font-weight: 700;
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-          .subtitle {
-            color: var(--muted);
-            margin-bottom: 32px;
-            font-size: 1.125rem;
-          }
-          .section {
-            margin: 32px 0;
-            padding: 24px;
-            background: rgba(255,255,255,0.02);
-            border-radius: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-          }
-          .section h2 {
-            margin: 0 0 20px;
-            font-weight: 600;
-            font-size: 1.5rem;
-            color: var(--text);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-          }
-          .section h2::before {
-            content: '';
-            width: 4px;
-            height: 24px;
-            background: linear-gradient(180deg, var(--accent), var(--accent-2));
-            border-radius: 2px;
-          }
-          .endpoint {
-            margin: 16px 0;
-            padding: 20px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 12px;
-            border-left: 4px solid var(--accent);
-            transition: all 0.2s;
-          }
-          .endpoint:hover {
-            background: rgba(255,255,255,0.06);
-            transform: translateX(4px);
-          }
-          .endpoint-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 8px;
-          }
-          .method {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.875rem;
-            font-family: 'JetBrains Mono', monospace;
-            letter-spacing: 0.5px;
-          }
-          .method.get {
-            background: linear-gradient(135deg, #22c55e, #16a34a);
-            color: white;
-          }
-          .method.post {
-            background: linear-gradient(135deg, #3b82f6, #2563eb);
-            color: white;
-          }
-          .endpoint a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 600;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.9375rem;
-          }
-          .endpoint a:hover {
-            text-decoration: underline;
-            color: var(--accent-2);
-          }
-          .endpoint p {
-            margin: 8px 0 0;
-            color: var(--muted);
-            font-size: 0.9375rem;
-          }
-          .nav {
-            margin-bottom: 32px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-          .nav a {
-            color: var(--accent);
-            text-decoration: none;
-            padding: 10px 18px;
-            border-radius: 10px;
-            background: rgba(122, 162, 247, 0.1);
-            transition: all 0.2s;
-            font-weight: 500;
-          }
-          .nav a:hover {
-            background: rgba(122, 162, 247, 0.2);
-            transform: translateY(-2px);
-          }
-          ul {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 12px;
-          }
-          ul li {
-            padding: 12px;
-            background: rgba(255,255,255,0.03);
-            border-radius: 8px;
-          }
-          ul li a {
-            color: var(--accent);
-            text-decoration: none;
-            font-weight: 500;
-          }
-          ul li a:hover {
-            text-decoration: underline;
-          }
-        </style>
+        {font_links}
+        {common_styles}
       </head>
       <body>
         <div class="wrap">
-          <div class="nav">
+          <div class="nav nav-large">
             <a href="/">🏠 Home</a>
             <a href="/api">📋 API Index</a>
             <a href="/docs">📚 Swagger UI</a>
             <a href="/index.json">📄 JSON</a>
           </div>
-          <h1>Reports & Monitoring</h1>
+          <h1 class="large">Reports & Monitoring</h1>
           <div class="subtitle">Comprehensive analytics and observability dashboard</div>
           
-          <div class="section" style="background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 2px solid rgba(122, 162, 247, 0.3); padding: 24px;">
-            <h2 style="margin-top: 0;">📋 Quick Access</h2>
-            <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px;">
-              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--accent);">
-                <a href="/reports/usage.html" style="font-weight: 600; font-size: 1.05rem; color: var(--accent);">📈 Usage Report (Grouped)</a>
-                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Algorithm usage grouped by type</div>
+          <div class="section highlight">
+            <h2>📋 Quick Access</h2>
+            <ul class="grid-large">
+              <li>
+                <a href="/reports/usage.html">📈 Usage Report (Grouped)</a>
+                <div class="quick-link-desc">Algorithm usage grouped by type</div>
               </li>
-              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--accent-2);">
-                <a href="/reports/usage/raw.html" style="font-weight: 600; font-size: 1.05rem; color: var(--accent-2);">📋 Raw Usage Report</a>
-                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Actual algorithm names without grouping</div>
+              <li class="accent-2">
+                <a href="/reports/usage/raw.html">📋 Raw Usage Report</a>
+                <div class="quick-link-desc">Actual algorithm names without grouping</div>
               </li>
-              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--good);">
-                <a href="/reports/performance" style="font-weight: 600; font-size: 1.05rem; color: var(--good);">⚡ Performance Report</a>
-                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Compare backend performance</div>
+              <li class="good">
+                <a href="/reports/performance">⚡ Performance Report</a>
+                <div class="quick-link-desc">Compare backend performance</div>
               </li>
-              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid #3b82f6;">
-                <a href="/reports/details.html" style="font-weight: 600; font-size: 1.05rem; color: #3b82f6;">📑 Details Report</a>
-                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Detailed prompts and timestamps</div>
+              <li class="info">
+                <a href="/reports/details.html">📑 Details Report</a>
+                <div class="quick-link-desc">Detailed prompts and timestamps</div>
               </li>
             </ul>
           </div>
@@ -1108,7 +849,7 @@ async def reports_index(request: Request) -> HTMLResponse:
           
           <div class="section">
             <h2>🔗 Quick Links</h2>
-            <ul>
+            <ul class="grid">
               <li><a href="/">Home</a></li>
               <li><a href="/api">API Index</a></li>
               <li><a href="/docs">Swagger UI</a></li>
@@ -1204,26 +945,8 @@ async def details_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HT
         <meta charset=\"utf-8\" />
         <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\" />
         <title>Detailed Report</title>
-        <link rel=\"preconnect\" href=\"https://fonts.googleapis.com\">
-        <link rel=\"preconnect\" href=\"https://fonts.gstatic.com\" crossorigin>
-        <link href=\"https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap\" rel=\"stylesheet\">
-        <style>
-          :root {{ --bg:#0b1021; --panel:#131a33; --text:#e6e9f2; --muted:#9aa3b2; --accent:#7aa2f7; }}
-          html, body {{ margin:0; padding:0; background:var(--bg); color:var(--text); }}
-          body {{ font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }}
-          .wrap {{ max-width: 960px; margin: 32px auto; padding: 24px; background: var(--panel); border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.2); }}
-          h1 {{ margin: 0 0 8px; font-weight: 600; }}
-          .sub {{ color: var(--muted); margin-bottom: 24px; }}
-          .pill {{ display:inline-block; padding: 2px 8px; border-radius: 999px; background:#243a69; color:#ccd7ff; font-size:12px; margin-left:8px; }}
-          section.grp {{ margin-bottom: 18px; }}
-          section.grp h3 {{ margin: 0 0 8px; }}
-          ul {{ margin: 0; padding-left: 1rem; }}
-          li {{ margin: 4px 0; }}
-          .prompt {{ color: #e6e9f2; }}
-          .when {{ color: var(--muted); margin-left: 8px; font-size: 12px; }}
-          .nav a {{ color: var(--accent); text-decoration: none; margin-right: 12px; }}
-          .empty {{ background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.18); padding: 16px; border-radius: 12px; margin-bottom: 16px; }}
-        </style>
+        {get_font_links()}
+        {get_common_styles()}
       </head>
       <body>
         <div class=\"wrap\">

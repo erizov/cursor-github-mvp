@@ -13,6 +13,7 @@ from backend.repositories import (
 )
 from backend.services import RecommendationService
 from backend.db import get_db
+from backend.html_styles import get_common_styles, get_font_links
 
 
 router = APIRouter(tags=["performance"])
@@ -265,126 +266,23 @@ async def test_all_backends(
 @router.get("/performance/report")
 async def performance_report() -> HTMLResponse:
     """HTML performance report page with graphs."""
-    html = """
+    font_links = get_font_links()
+    common_styles = get_common_styles()
+    html = f"""
     <!doctype html>
     <html lang="en">
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>Performance Report</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+        {font_links}
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        {common_styles}
         <style>
-          :root {
-            --bg: #0b1021;
-            --panel: #131a33;
-            --text: #e6e9f2;
-            --muted: #9aa3b2;
-            --accent: #7aa2f7;
-            --accent-2: #8bd5ca;
-            --good: #22c55e;
-            --warning: #fbbf24;
-            --danger: #ef4444;
-          }
-          @media (prefers-color-scheme: light) {
-            :root {
-              --bg: #f6f7fb;
-              --panel: #ffffff;
-              --text: #0f172a;
-              --muted: #546072;
-              --accent: #3b82f6;
-              --accent-2: #06b6d4;
-              --good: #16a34a;
-              --warning: #f59e0b;
-              --danger: #dc2626;
-            }
-          }
-          * { box-sizing: border-box; }
-          html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
-          body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; padding: 32px; }
-          .wrap {
-            max-width: 1800px;
-            margin: 0 auto;
-            background: var(--panel);
-            border-radius: 20px;
-            padding: 40px;
-            box-shadow: 0 20px 60px rgba(0,0,0,.3);
-          }
-          h1 {
-            margin: 0 0 8px;
-            font-weight: 700;
-            font-size: 2.5rem;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-          }
-          .subtitle {
-            color: var(--muted);
-            margin-bottom: 32px;
-            font-size: 1.125rem;
-          }
-          .nav {
-            margin-bottom: 32px;
-            display: flex;
-            gap: 12px;
-            flex-wrap: wrap;
-          }
-          .nav a {
-            color: var(--accent);
-            text-decoration: none;
-            padding: 10px 18px;
-            border-radius: 10px;
-            background: rgba(122, 162, 247, 0.1);
-            transition: all 0.2s;
-            font-weight: 500;
-          }
-          .nav a:hover {
-            background: rgba(122, 162, 247, 0.2);
-            transform: translateY(-2px);
-          }
-          .controls {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 24px;
-            flex-wrap: wrap;
-          }
-          .controls label {
-            color: var(--muted);
-            font-size: 0.875rem;
-          }
-          select, input {
-            padding: 8px 12px;
-            border-radius: 8px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            color: var(--text);
-            font-family: 'Inter', sans-serif;
-            font-size: 0.875rem;
-          }
-          button {
-            padding: 10px 20px;
-            cursor: pointer;
-            background: linear-gradient(135deg, var(--accent), var(--accent-2));
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.2s;
-            font-family: 'Inter', sans-serif;
-          }
-          button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(122, 162, 247, 0.4);
-          }
-          button:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-          }
+          body { padding: 32px; }
+          .wrap { max-width: 1800px; }
+          h1 { font-size: 2.5rem; }
+          .nav { margin-bottom: 32px; }
           .status {
             padding: 12px;
             margin-bottom: 16px;
