@@ -269,7 +269,7 @@ def test_docker_api_endpoints():
         assert "recommendations" in response.json()
         
         # Test usage report
-        response = requests.get(f"{base_url}/api/reports/usage", timeout=10)
+        response = requests.get(f"{base_url}/reports/usage", timeout=10)
         assert response.status_code == 200
         assert "total" in response.json()
     finally:
@@ -496,7 +496,7 @@ def test_docker_e2e_full_workflow():
         
         # Verify usage report
         print("Verifying usage report...")
-        response = requests.get(f"{base_url}/api/reports/usage", timeout=10)
+        response = requests.get(f"{base_url}/reports/usage", timeout=10)
         assert response.status_code == 200
         data = response.json()
         assert data["total"] == len(prompts), f"Expected {len(prompts)} total, got {data['total']}"
@@ -505,7 +505,7 @@ def test_docker_e2e_full_workflow():
         
         # Verify detailed report
         print("Verifying detailed report...")
-        response = requests.get(f"{base_url}/api/reports/details", timeout=10)
+        response = requests.get(f"{base_url}/reports/details", timeout=10)
         assert response.status_code == 200
         details = response.json()
         assert details["total"] == len(prompts)

@@ -17,7 +17,7 @@ COPY backend/ ./backend/
 COPY ai_algorithm_teacher.py ./
 
 # Set environment for in-memory backend
-ENV USE_IN_MEMORY=1
+ENV BACKEND_TYPE=inmemory
 
 # Expose API
 EXPOSE 8000

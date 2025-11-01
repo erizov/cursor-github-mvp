@@ -474,10 +474,25 @@ async def api_index(request: Request) -> HTMLResponse:
       </ul>
 """
     
+    quick_links_html = """
+        <div style="margin-bottom: 32px; padding: 20px; background: rgba(122, 162, 247, 0.1); border-radius: 12px; border: 1px solid rgba(122, 162, 247, 0.2);">
+          <h2 style="margin-top: 0; color: var(--accent);">🔗 Quick Links</h2>
+          <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+            <li><a href="/reports">📊 All Reports</a></li>
+            <li><a href="/reports/usage.html">📈 Usage Report (Grouped)</a></li>
+            <li><a href="/reports/usage/raw.html">📋 Raw Usage Report</a></li>
+            <li><a href="/reports/performance">⚡ Performance Report</a></li>
+            <li><a href="/docs">📚 Swagger UI</a></li>
+            <li><a href="/metrics.html">📊 Metrics</a></li>
+          </ul>
+        </div>
+    """
+    
     body = f"""
       <div style="max-width: 1200px; margin: 0 auto; background: rgba(255,255,255,0.02); border-radius: 20px; padding: 32px; box-shadow: 0 20px 60px rgba(0,0,0,.3);">
         <h1>API Index</h1>
         <p class="small" style="margin: 0 0 24px;">Host: {request.url.hostname} • Path: {request.url.path}</p>
+        {quick_links_html}
         {groups_html}
       </div>
     """

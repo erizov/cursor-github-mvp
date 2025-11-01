@@ -1,0 +1,35 @@
+# Cassandra Backend Dockerfile
+# Uses python:3.11 (not slim) to have build tools for C extensions
+FROM python:3.11
+
+WORKDIR /app
+
+# Install system dependencies for Cassandra driver C extensions
+# python:3.11 includes build-essential by default, but we ensure gcc and libev are available
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gcc \
+        g++ \
+        libev-dev \
+        pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python deps (Cassandra driver will build C extensions)
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application
+COPY backend/ ./backend/
+COPY ai_algorithm_teacher.py ./
+
+# Set environment for Cassandra backend
+ENV BACKEND_TYPE=cassandra
+ENV CASSANDRA_HOSTS=cassandra
+ENV CASSANDRA_KEYSPACE=ai_algo_teacher
+
+# Expose API
+EXPOSE 8000
+
+# Default command
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "8000"]
+

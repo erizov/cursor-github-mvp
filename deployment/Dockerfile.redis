@@ -1,4 +1,4 @@
-# SQLite Backend Dockerfile
+# Redis Backend Dockerfile
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -8,21 +8,18 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python deps (add aiosqlite for async SQLite support)
+# Install Python deps
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt aiosqlite
+RUN pip install --no-cache-dir -r requirements.txt redis
 
 # Copy application
 COPY backend/ ./backend/
 COPY ai_algorithm_teacher.py ./
 
-# Set environment for SQLite backend
-# Note: SQLite backend is not fully implemented yet, defaults to in-memory
+# Set environment for Redis backend
+# Note: Redis backend is not fully implemented yet, defaults to in-memory
 ENV BACKEND_TYPE=inmemory
-ENV SQLITE_DB_PATH=/app/data/ai_algo_teacher.db
-
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
+ENV REDIS_URL=redis://redis:6379/0
 
 # Expose API
 EXPOSE 8000

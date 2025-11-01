@@ -17,7 +17,7 @@ COPY backend/ ./backend/
 COPY ai_algorithm_teacher.py ./
 
 # Set environment for MongoDB backend
-ENV USE_IN_MEMORY=0
+ENV BACKEND_TYPE=mongodb
 ENV MONGODB_URI=mongodb://localhost:27017
 ENV MONGODB_DB=ai_algo_teacher
 

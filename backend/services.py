@@ -8,6 +8,16 @@ from backend.monitoring import ALGORITHM_TOP_SELECTIONS
 from backend.logging_config import get_logger
 
 
+def get_row_type_from_algorithm(algorithm: str) -> str:
+    """
+    Get the raw algorithm name (no grouping/categorization).
+    
+    This function returns the algorithm name as-is without any transformation.
+    Useful for displaying raw algorithm usage data.
+    """
+    return algorithm
+
+
 def get_algorithm_type_from_algorithm(algorithm: str) -> str:
     """Map algorithm name to algorithm type category."""
     alg_lower = algorithm.lower()
@@ -60,7 +70,8 @@ def get_algorithm_type_from_algorithm(algorithm: str) -> str:
     elif any(x in alg_lower for x in ["automl", "auto-ml", "automated machine learning", "neural architecture search"]):
         return "AutoML"
     else:
-        return "Other"
+        # Default to Classification instead of "Other" to avoid unwanted category
+        return "Classification"
 
 
 class RecommendationService:

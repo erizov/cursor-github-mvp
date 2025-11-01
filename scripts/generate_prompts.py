@@ -59,7 +59,8 @@ def get_algorithm_type_from_algorithm(algorithm: str) -> str:
     elif any(x in alg_lower for x in ["automl", "auto-ml", "automated machine learning", "neural architecture search"]):
         return "AutoML"
     else:
-        return "Other"
+        # Default to Classification instead of "Other"
+        return "Classification"
 
 
 def generate_classification_prompts() -> List[Tuple[str, str]]:

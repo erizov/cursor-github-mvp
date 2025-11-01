@@ -19,7 +19,8 @@ def get_algorithm_type_from_prompt(prompt: str) -> str:
     """Determine algorithm type from prompt using recommendation engine."""
     recs = build_recommendations(prompt)
     if not recs:
-        return "Other"
+        # Default to Classification instead of "Other"
+        return "Classification"
     
     top_algorithm = recs[0].algorithm
     alg_lower = top_algorithm.lower()
@@ -74,7 +75,8 @@ def get_algorithm_type_from_prompt(prompt: str) -> str:
     elif any(x in alg_lower for x in ["automl", "auto-ml", "automated machine learning", "neural architecture search"]):
         return "AutoML"
     else:
-        return "Other"
+        # Default to Classification instead of "Other"
+        return "Classification"
 
 
 async def seed_database():

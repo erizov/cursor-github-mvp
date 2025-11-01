@@ -141,6 +141,259 @@ def _merge_counts(counts: list[dict]) -> list[dict]:
     return out
 
 
+@router.get("/reports/usage/raw.html", response_class=HTMLResponse)
+async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTMLResponse:
+    """Raw usage report HTML showing actual algorithm names without grouping."""
+    counts = await repo.usage_counts()
+    # Filter out "Other" and sort by count descending, then by algorithm name ascending
+    counts = [c for c in counts if c["algorithm"].lower() != "other"]
+    counts = sorted(counts, key=lambda x: (-x["count"], x["algorithm"]))
+    total = await repo.total()
+
+    def pct(count: int) -> float:
+        return (count / total * 100.0) if total else 0.0
+
+    rows = []
+    for c in counts:
+        percent = pct(c["count"])
+        bar_w = f"{percent:.2f}%"
+        rows.append(
+            f"""
+            <tr>
+              <td class=alg>{c["algorithm"]}</td>
+              <td class=num>{c["count"]}</td>
+              <td class=num>{percent:.2f}%</td>
+              <td class=bar>
+                <div class=barbg>
+                  <div class=barfill style=\"width:{bar_w}\"></div>
+                </div>
+              </td>
+            </tr>
+            """
+        )
+
+    # Prepare data for charts (show top 25 raw algorithms, excluding Other)
+    chart_labels = [c["algorithm"] for c in counts[:25]]
+    chart_data = [c["count"] for c in counts[:25]]
+    chart_colors = [
+        "rgba(122, 162, 247, 0.8)", "rgba(139, 213, 202, 0.8)", "rgba(106, 214, 154, 0.8)",
+        "rgba(251, 191, 36, 0.8)", "rgba(239, 68, 68, 0.8)", "rgba(167, 139, 250, 0.8)",
+        "rgba(244, 114, 182, 0.8)", "rgba(34, 197, 94, 0.8)", "rgba(59, 130, 246, 0.8)",
+        "rgba(249, 115, 22, 0.8)", "rgba(168, 85, 247, 0.8)", "rgba(236, 72, 153, 0.8)",
+        "rgba(14, 165, 233, 0.8)", "rgba(20, 184, 166, 0.8)", "rgba(245, 158, 11, 0.8)",
+        "rgba(217, 70, 239, 0.8)", "rgba(99, 102, 241, 0.8)", "rgba(225, 29, 72, 0.8)",
+        "rgba(6, 182, 212, 0.8)", "rgba(16, 185, 129, 0.8)", "rgba(251, 146, 60, 0.8)",
+        "rgba(139, 92, 246, 0.8)", "rgba(147, 197, 253, 0.8)", "rgba(74, 222, 128, 0.8)",
+        "rgba(252, 211, 77, 0.8)"
+    ]
+    
+    body = f"""
+    <!doctype html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Raw Usage Report</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+        <style>
+          :root {{
+            --bg: #0b1021;
+            --panel: #131a33;
+            --text: #e6e9f2;
+            --muted: #9aa3b2;
+            --accent: #7aa2f7;
+            --accent-2: #8bd5ca;
+            --good: #6ad69a;
+            --warning: #fbbf24;
+            --danger: #ef4444;
+          }}
+          @media (prefers-color-scheme: light) {{
+            :root {{
+              --bg: #f6f7fb; --panel: #ffffff; --text: #0f172a; --muted: #546072;
+              --accent: #3b82f6; --accent-2: #06b6d4; --good: #16a34a;
+              --warning: #f59e0b; --danger: #dc2626;
+            }}
+          }}
+          html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
+          body {{ font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; }}
+          .wrap {{ max-width: 1200px; margin: 32px auto; padding: 32px; background: var(--panel); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }}
+          h1 {{ margin: 0 0 8px; font-weight: 700; font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }}
+          .sub {{ color: var(--muted); margin-bottom: 24px; font-size: 1rem; }}
+          .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }}
+          .statbox {{ padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 1px solid rgba(122, 162, 247, 0.2); }}
+          .statbox .label {{ color: var(--muted); font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; }}
+          .statbox .value {{ font-weight: 700; font-size: 2rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; }}
+          .charts-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px; }}
+          .chart-container {{ position: relative; height: 300px; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; }}
+          table {{ width: 100%; border-collapse: collapse; margin-top: 24px; }}
+          th, td {{ padding: 14px 16px; text-align: left; }}
+          thead th {{ color: var(--muted); font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid rgba(255,255,255,.1); }}
+          tbody tr {{ border-bottom: 1px solid rgba(255,255,255,.05); transition: all 0.2s; }}
+          tbody tr:hover {{ background: rgba(122,162,247,.1); transform: translateX(4px); }}
+          td.alg {{ font-weight: 600; color: var(--text); }}
+          td.num {{ font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: var(--accent); }}
+          td.bar {{ width: 200px; }}
+          td.bar .barbg {{ height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }}
+          td.bar .barfill {{ height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 0.3s ease; }}
+          .nav {{ margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap; }}
+          .nav a {{ color: var(--accent); text-decoration: none; padding: 8px 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); transition: all 0.2s; font-weight: 500; }}
+          .nav a:hover {{ background: rgba(122, 162, 247, 0.2); transform: translateY(-2px); }}
+          .empty {{ background: rgba(255,255,255,.04); border: 2px dashed rgba(255,255,255,.18); padding: 24px; border-radius: 12px; margin-bottom: 16px; text-align: center; }}
+          .info-badge {{ display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(251, 191, 36, 0.2); color: var(--warning); font-size: 0.75rem; font-weight: 600; margin-left: 12px; }}
+        </style>
+      </head>
+      <body>
+        <div class="wrap">
+          <div class="nav">
+            <a href="/">🏠 Home</a>
+            <a href="/api">📋 API</a>
+            <a href="/docs">📚 Docs</a>
+            <a href="/reports">📊 All Reports</a>
+            <a href="/reports/usage.html">📈 Grouped Report</a>
+            <a href="/reports/usage/raw">📄 JSON</a>
+            <a href="/reports/details.html">📑 Details</a>
+            <a href="/reports/performance">⚡ Performance</a>
+          </div>
+          <h1>Raw Usage Report<span class="info-badge">Raw Algorithm Names</span></h1>
+          <div class="sub">Algorithm usage showing actual algorithm names without grouping by type</div>
+          <div class="stats-grid">
+            <div class="statbox">
+              <div class="label">Total Selections</div>
+              <div class="value">{total}</div>
+            </div>
+            <div class="statbox">
+              <div class="label">Unique Algorithms</div>
+              <div class="value">{len(counts)}</div>
+            </div>
+            <div class="statbox">
+              <div class="label">Top Algorithm</div>
+              <div class="value" style="font-size: 1.25rem; color: var(--accent-2);">{counts[0]['algorithm'] if counts else 'N/A'}</div>
+            </div>
+          </div>
+          {_get_empty_state_html() if not total else ""}
+          {f'''
+          <div class="charts-grid">
+            <div class="chart-container">
+              <canvas id="barChart"></canvas>
+            </div>
+            <div class="chart-container">
+              <canvas id="pieChart"></canvas>
+            </div>
+          </div>
+          ''' if total else ''}
+          <table>
+            <thead>
+              <tr><th>Algorithm</th><th>Count</th><th>Percent</th><th>Share</th></tr>
+            </thead>
+            <tbody>
+              {(''.join(rows)) if total else '<tr><td colspan="4" style="color: var(--muted); text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+        {f'''
+        <script>
+          const chartData = {{
+            labels: {chart_labels},
+            data: {chart_data},
+            colors: {chart_colors}
+          }};
+          
+          // Bar Chart
+          new Chart(document.getElementById('barChart'), {{
+            type: 'bar',
+            data: {{
+              labels: chartData.labels,
+              datasets: [{{
+                label: 'Usage Count',
+                data: chartData.data,
+                backgroundColor: chartData.colors.slice(0, chartData.data.length),
+                borderRadius: 8,
+                borderSkipped: false,
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {{
+                legend: {{ display: false }},
+                tooltip: {{
+                  backgroundColor: 'rgba(19, 26, 51, 0.95)',
+                  titleColor: '#e6e9f2',
+                  bodyColor: '#e6e9f2',
+                  borderColor: '#7aa2f7',
+                  borderWidth: 1,
+                  padding: 12,
+                  cornerRadius: 8,
+                }}
+              }},
+              scales: {{
+                x: {{
+                  ticks: {{ color: '#9aa3b2', font: {{ family: 'Inter', size: 11 }}, maxRotation: 45, minRotation: 45 }},
+                  grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                }},
+                y: {{
+                  ticks: {{ color: '#9aa3b2', font: {{ family: 'JetBrains Mono', size: 11 }} }},
+                  grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                }}
+              }}
+            }}
+          }});
+          
+          // Pie Chart
+          new Chart(document.getElementById('pieChart'), {{
+            type: 'pie',
+            data: {{
+              labels: chartData.labels,
+              datasets: [{{
+                data: chartData.data,
+                backgroundColor: chartData.colors.slice(0, chartData.data.length),
+                borderWidth: 2,
+                borderColor: 'rgba(11, 16, 33, 0.8)',
+              }}]
+            }},
+            options: {{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {{
+                legend: {{
+                  position: 'right',
+                  labels: {{
+                    color: '#9aa3b2',
+                    font: {{ family: 'Inter', size: 11 }},
+                    padding: 12,
+                    usePointStyle: true,
+                  }}
+                }},
+                tooltip: {{
+                  backgroundColor: 'rgba(19, 26, 51, 0.95)',
+                  titleColor: '#e6e9f2',
+                  bodyColor: '#e6e9f2',
+                  borderColor: '#7aa2f7',
+                  borderWidth: 1,
+                  padding: 12,
+                  cornerRadius: 8,
+                  callbacks: {{
+                    label: function(context) {{
+                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                      const percentage = ((context.parsed / total) * 100).toFixed(1);
+                      return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
+                    }}
+                  }}
+                }}
+              }}
+            }}
+          }});
+        </script>
+        ''' if total else ''}
+      </body>
+    </html>
+    """
+    return HTMLResponse(content=body)
+
+
 @router.get("/reports/usage", response_model=UsageReportResponse)
 async def usage(repo: MongoSelectionRepository = Depends(get_repo)):
     counts = await repo.usage_counts()
@@ -273,9 +526,12 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <a href="/">🏠 Home</a>
             <a href="/api">📋 API</a>
             <a href="/docs">📚 Docs</a>
+            <a href="/reports">📊 All Reports</a>
             <a href="/reports/usage">📊 JSON</a>
+            <a href="/reports/usage.html">📈 Grouped Report</a>
             <a href="/reports/usage/raw.html">📋 Raw Report</a>
             <a href="/reports/details.html">📑 Details</a>
+            <a href="/reports/performance">⚡ Performance</a>
             <select id="seedCount" style="padding: 8px 12px; border-radius: 8px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.875rem; cursor: pointer;">
               <option value="10">10 prompts</option>
               <option value="50">50 prompts</option>
@@ -523,254 +779,6 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
     return HTMLResponse(content=body)
 
 
-@router.get("/reports/usage/raw.html", response_class=HTMLResponse)
-async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTMLResponse:
-    """Raw usage report HTML showing actual algorithm names without grouping."""
-    counts = await repo.usage_counts()
-    # Sort by count descending, then by algorithm name ascending (no grouping/merging)
-    counts = sorted(counts, key=lambda x: (-x["count"], x["algorithm"]))
-    total = await repo.total()
-
-    def pct(count: int) -> float:
-        return (count / total * 100.0) if total else 0.0
-
-    rows = []
-    for c in counts:
-        percent = pct(c["count"])
-        bar_w = f"{percent:.2f}%"
-        rows.append(
-            f"""
-            <tr>
-              <td class=alg>{c["algorithm"]}</td>
-              <td class=num>{c["count"]}</td>
-              <td class=num>{percent:.2f}%</td>
-              <td class=bar>
-                <div class=barbg>
-                  <div class=barfill style=\"width:{bar_w}\"></div>
-                </div>
-              </td>
-            </tr>
-            """
-        )
-
-    # Prepare data for charts (show top 20 raw algorithms)
-    chart_labels = [c["algorithm"] for c in counts[:20]]
-    chart_data = [c["count"] for c in counts[:20]]
-    chart_colors = [
-        "rgba(122, 162, 247, 0.8)", "rgba(139, 213, 202, 0.8)", "rgba(106, 214, 154, 0.8)",
-        "rgba(251, 191, 36, 0.8)", "rgba(239, 68, 68, 0.8)", "rgba(167, 139, 250, 0.8)",
-        "rgba(244, 114, 182, 0.8)", "rgba(34, 197, 94, 0.8)", "rgba(59, 130, 246, 0.8)",
-        "rgba(249, 115, 22, 0.8)", "rgba(168, 85, 247, 0.8)", "rgba(236, 72, 153, 0.8)",
-        "rgba(14, 165, 233, 0.8)", "rgba(20, 184, 166, 0.8)", "rgba(245, 158, 11, 0.8)",
-        "rgba(217, 70, 239, 0.8)", "rgba(99, 102, 241, 0.8)", "rgba(225, 29, 72, 0.8)",
-        "rgba(6, 182, 212, 0.8)", "rgba(16, 185, 129, 0.8)"
-    ]
-    
-    body = f"""
-    <!doctype html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Raw Usage Report</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-        <style>
-          :root {{
-            --bg: #0b1021;
-            --panel: #131a33;
-            --text: #e6e9f2;
-            --muted: #9aa3b2;
-            --accent: #7aa2f7;
-            --accent-2: #8bd5ca;
-            --good: #6ad69a;
-            --warning: #fbbf24;
-            --danger: #ef4444;
-          }}
-          @media (prefers-color-scheme: light) {{
-            :root {{
-              --bg: #f6f7fb; --panel: #ffffff; --text: #0f172a; --muted: #546072;
-              --accent: #3b82f6; --accent-2: #06b6d4; --good: #16a34a;
-              --warning: #f59e0b; --danger: #dc2626;
-            }}
-          }}
-          html, body {{ margin: 0; padding: 0; background: var(--bg); color: var(--text); }}
-          body {{ font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; }}
-          .wrap {{ max-width: 1200px; margin: 32px auto; padding: 32px; background: var(--panel); border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); }}
-          h1 {{ margin: 0 0 8px; font-weight: 700; font-size: 2rem; background: linear-gradient(135deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }}
-          .sub {{ color: var(--muted); margin-bottom: 24px; font-size: 1rem; }}
-          .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 32px; }}
-          .statbox {{ padding: 20px; border-radius: 12px; background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 1px solid rgba(122, 162, 247, 0.2); }}
-          .statbox .label {{ color: var(--muted); font-size: 0.875rem; font-weight: 500; margin-bottom: 8px; }}
-          .statbox .value {{ font-weight: 700; font-size: 2rem; color: var(--accent); font-family: 'JetBrains Mono', monospace; }}
-          .charts-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 24px; margin-bottom: 32px; }}
-          .chart-container {{ position: relative; height: 300px; background: rgba(255,255,255,0.02); border-radius: 12px; padding: 20px; }}
-          table {{ width: 100%; border-collapse: collapse; margin-top: 24px; }}
-          th, td {{ padding: 14px 16px; text-align: left; }}
-          thead th {{ color: var(--muted); font-size: 0.875rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 2px solid rgba(255,255,255,.1); }}
-          tbody tr {{ border-bottom: 1px solid rgba(255,255,255,.05); transition: all 0.2s; }}
-          tbody tr:hover {{ background: rgba(122,162,247,.1); transform: translateX(4px); }}
-          td.alg {{ font-weight: 600; color: var(--text); }}
-          td.num {{ font-variant-numeric: tabular-nums; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; color: var(--accent); }}
-          td.bar {{ width: 200px; }}
-          td.bar .barbg {{ height: 12px; background: rgba(255,255,255,.1); border-radius: 999px; overflow: hidden; box-shadow: inset 0 2px 4px rgba(0,0,0,.2); }}
-          td.bar .barfill {{ height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-radius: 999px; transition: width 0.3s ease; }}
-          .nav {{ margin-bottom: 24px; display: flex; gap: 12px; flex-wrap: wrap; }}
-          .nav a {{ color: var(--accent); text-decoration: none; padding: 8px 16px; border-radius: 8px; background: rgba(122, 162, 247, 0.1); transition: all 0.2s; font-weight: 500; }}
-          .nav a:hover {{ background: rgba(122, 162, 247, 0.2); transform: translateY(-2px); }}
-          .empty {{ background: rgba(255,255,255,.04); border: 2px dashed rgba(255,255,255,.18); padding: 24px; border-radius: 12px; margin-bottom: 16px; text-align: center; }}
-          .info-badge {{ display: inline-block; padding: 4px 12px; border-radius: 999px; background: rgba(251, 191, 36, 0.2); color: var(--warning); font-size: 0.75rem; font-weight: 600; margin-left: 12px; }}
-        </style>
-      </head>
-      <body>
-        <div class="wrap">
-          <div class="nav">
-            <a href="/">🏠 Home</a>
-            <a href="/api">📋 API</a>
-            <a href="/docs">📚 Docs</a>
-            <a href="/reports/usage.html">📊 Grouped Report</a>
-            <a href="/reports/usage/raw">📄 JSON</a>
-            <a href="/reports/details.html">📑 Details</a>
-          </div>
-          <h1>Raw Usage Report<span class="info-badge">Raw Algorithm Names</span></h1>
-          <div class="sub">Algorithm usage showing actual algorithm names without grouping by type</div>
-          <div class="stats-grid">
-            <div class="statbox">
-              <div class="label">Total Selections</div>
-              <div class="value">{total}</div>
-            </div>
-            <div class="statbox">
-              <div class="label">Unique Algorithms</div>
-              <div class="value">{len(counts)}</div>
-            </div>
-            <div class="statbox">
-              <div class="label">Top Algorithm</div>
-              <div class="value" style="font-size: 1.25rem; color: var(--accent-2);">{counts[0]['algorithm'] if counts else 'N/A'}</div>
-            </div>
-          </div>
-          {_get_empty_state_html() if not total else ""}
-          {f'''
-          <div class="charts-grid">
-            <div class="chart-container">
-              <canvas id="barChart"></canvas>
-            </div>
-            <div class="chart-container">
-              <canvas id="pieChart"></canvas>
-            </div>
-          </div>
-          ''' if total else ''}
-          <table>
-            <thead>
-              <tr><th>Algorithm</th><th>Count</th><th>Percent</th><th>Share</th></tr>
-            </thead>
-            <tbody>
-              {(''.join(rows)) if total else '<tr><td colspan="4" style="color: var(--muted); text-align: center; padding: 32px;">No selections recorded yet.</td></tr>'}
-            </tbody>
-          </table>
-        </div>
-        {f'''
-        <script>
-          const chartData = {{
-            labels: {chart_labels},
-            data: {chart_data},
-            colors: {chart_colors}
-          }};
-          
-          // Bar Chart
-          new Chart(document.getElementById('barChart'), {{
-            type: 'bar',
-            data: {{
-              labels: chartData.labels,
-              datasets: [{{
-                label: 'Usage Count',
-                data: chartData.data,
-                backgroundColor: chartData.colors.slice(0, chartData.data.length),
-                borderRadius: 8,
-                borderSkipped: false,
-              }}]
-            }},
-            options: {{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {{
-                legend: {{ display: false }},
-                tooltip: {{
-                  backgroundColor: 'rgba(19, 26, 51, 0.95)',
-                  titleColor: '#e6e9f2',
-                  bodyColor: '#e6e9f2',
-                  borderColor: '#7aa2f7',
-                  borderWidth: 1,
-                  padding: 12,
-                  cornerRadius: 8,
-                }}
-              }},
-              scales: {{
-                x: {{
-                  ticks: {{ color: '#9aa3b2', font: {{ family: 'Inter', size: 11 }}, maxRotation: 45, minRotation: 45 }},
-                  grid: {{ color: 'rgba(255,255,255,0.05)' }}
-                }},
-                y: {{
-                  ticks: {{ color: '#9aa3b2', font: {{ family: 'JetBrains Mono', size: 11 }} }},
-                  grid: {{ color: 'rgba(255,255,255,0.05)' }}
-                }}
-              }}
-            }}
-          }});
-          
-          // Pie Chart
-          new Chart(document.getElementById('pieChart'), {{
-            type: 'pie',
-            data: {{
-              labels: chartData.labels,
-              datasets: [{{
-                data: chartData.data,
-                backgroundColor: chartData.colors.slice(0, chartData.data.length),
-                borderWidth: 2,
-                borderColor: 'rgba(11, 16, 33, 0.8)',
-              }}]
-            }},
-            options: {{
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {{
-                legend: {{
-                  position: 'right',
-                  labels: {{
-                    color: '#9aa3b2',
-                    font: {{ family: 'Inter', size: 11 }},
-                    padding: 12,
-                    usePointStyle: true,
-                  }}
-                }},
-                tooltip: {{
-                  backgroundColor: 'rgba(19, 26, 51, 0.95)',
-                  titleColor: '#e6e9f2',
-                  bodyColor: '#e6e9f2',
-                  borderColor: '#7aa2f7',
-                  borderWidth: 1,
-                  padding: 12,
-                  cornerRadius: 8,
-                  callbacks: {{
-                    label: function(context) {{
-                      const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                      const percentage = ((context.parsed / total) * 100).toFixed(1);
-                      return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                    }}
-                  }}
-                }}
-              }}
-            }}
-          }});
-        </script>
-        ''' if total else ''}
-      </body>
-    </html>
-    """
-    return HTMLResponse(content=body)
-
-
 @router.get("/reports/details", response_model=DetailedReportResponse)
 async def details(repo: MongoSelectionRepository = Depends(get_repo)) -> DetailedReportResponse:
     groups_raw = await repo.detailed_by_algorithm()
@@ -994,6 +1002,28 @@ async def reports_index(request: Request) -> HTMLResponse:
           <h1>Reports & Monitoring</h1>
           <div class="subtitle">Comprehensive analytics and observability dashboard</div>
           
+          <div class="section" style="background: linear-gradient(135deg, rgba(122, 162, 247, 0.15), rgba(139, 213, 202, 0.15)); border: 2px solid rgba(122, 162, 247, 0.3); padding: 24px;">
+            <h2 style="margin-top: 0;">📋 Quick Access</h2>
+            <ul style="list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-top: 16px;">
+              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--accent);">
+                <a href="/reports/usage.html" style="font-weight: 600; font-size: 1.05rem; color: var(--accent);">📈 Usage Report (Grouped)</a>
+                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Algorithm usage grouped by type</div>
+              </li>
+              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--accent-2);">
+                <a href="/reports/usage/raw.html" style="font-weight: 600; font-size: 1.05rem; color: var(--accent-2);">📋 Raw Usage Report</a>
+                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Actual algorithm names without grouping</div>
+              </li>
+              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid var(--good);">
+                <a href="/reports/performance" style="font-weight: 600; font-size: 1.05rem; color: var(--good);">⚡ Performance Report</a>
+                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Compare backend performance</div>
+              </li>
+              <li style="padding: 16px; background: rgba(255,255,255,0.05); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                <a href="/reports/details.html" style="font-weight: 600; font-size: 1.05rem; color: #3b82f6;">📑 Details Report</a>
+                <div style="margin-top: 4px; color: var(--muted); font-size: 0.875rem;">Detailed prompts and timestamps</div>
+              </li>
+            </ul>
+          </div>
+          
           <div class="section">
             <h2>⚡ Performance Reports</h2>
             <div class="endpoint">
@@ -1197,7 +1227,15 @@ async def details_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HT
       </head>
       <body>
         <div class=\"wrap\">
-          <div class=\"nav\"><a href=\"/\">Home</a><a href=\"/api\">API</a><a href=\"/docs\">Docs</a></div>
+          <div class=\"nav\">
+            <a href=\"/\">🏠 Home</a>
+            <a href=\"/api\">📋 API</a>
+            <a href=\"/docs\">📚 Docs</a>
+            <a href=\"/reports\">📊 All Reports</a>
+            <a href=\"/reports/usage.html\">📈 Grouped Report</a>
+            <a href=\"/reports/usage/raw.html\">📋 Raw Report</a>
+            <a href=\"/reports/performance\">⚡ Performance</a>
+          </div>
           <h1>Detailed Report</h1>
           <div class=\"sub\">Grouped by algorithm (desc). Total: {total}</div>
           {''.join(sections) if total else _get_empty_details_html()}

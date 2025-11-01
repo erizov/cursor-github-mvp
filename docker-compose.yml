@@ -1,27 +1,104 @@
-version: '3.8'
-
 services:
-  api:
-    build: .
-    container_name: algorithm-teacher
-    ports:
-      - "8000:8000"
-    environment:
-      - MONGODB_URI=mongodb://mongo:27017
-      - MONGODB_DB=algorithm_teacher
-      - LOG_LEVEL=INFO
-    depends_on:
-      - mongo
-    restart: unless-stopped
-
+  # Databases - kept running all the time
   mongo:
     image: mongo:7
+    container_name: alg-teach-mongo
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: alg-teach-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=ai_algo_teacher
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: alg-teach-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  memcached:
+    image: memcached:1.6-alpine
+    container_name: alg-teach-memcached
+    ports:
+      - "11211:11211"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "11211"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  neo4j:
+    image: neo4j:5-community
+    container_name: alg-teach-neo4j
+    ports:
+      - "7475:7474"  # Changed external port to avoid conflict with existing Neo4j
+      - "7688:7687"  # Changed external port to avoid conflict with existing Neo4j
+    environment:
+      - NEO4J_AUTH=neo4j/password
+      - NEO4J_PLUGINS=["apoc"]
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:7474"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  cassandra:
+    image: cassandra:5
+    container_name: alg-teach-cassandra
+    ports:
+      - "9042:9042"
+    environment:
+      - CASSANDRA_CLUSTER_NAME=alg-teach-cluster
+    volumes:
+      - cassandra_data:/var/lib/cassandra
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "nodetool status | grep -E '^UN'"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
 
 volumes:
   mongo_data:
+  postgres_data:
+  redis_data:
+  neo4j_data:
+  neo4j_logs:
+  cassandra_data:
+
 

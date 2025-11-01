@@ -41,7 +41,7 @@ def test_recommend_and_counts(app_with_fake_repo):
     assert "recommendations" in data and len(data["recommendations"]) > 0
 
     # Now usage report should reflect 1 selection
-    r2 = client.get("/api/reports/usage")
+    r2 = client.get("/reports/usage")
     assert r2.status_code == 200
     rep = r2.json()
     assert rep["total"] == 1

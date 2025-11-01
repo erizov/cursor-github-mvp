@@ -30,7 +30,8 @@ def create_app() -> FastAPI:
             raise
     app.include_router(index_router)
     app.include_router(recommendations_router, prefix="/api")
-    app.include_router(reports_router, prefix="/api")
+    app.include_router(reports_router, prefix="")
+    # Performance test endpoints stay under /api, report endpoint moved to /reports
     app.include_router(performance_router, prefix="/api")
     Instrumentator().instrument(app).expose(app)
     return app

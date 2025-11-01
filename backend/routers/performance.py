@@ -18,31 +18,78 @@ from backend.db import get_db
 router = APIRouter(tags=["performance"])
 
 
-async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
+async def run_performance_test(backend: str, num_requests: int = 500) -> Dict:
     """Run performance test against a specific backend.
     
     Only measures DB operations (inserts/updates/deletes), excluding
     startup/shutdown times.
     """
     # Store original env
-    original_use_in_memory = os.getenv("USE_IN_MEMORY", "1")
+    original_backend_type = os.getenv("BACKEND_TYPE", "inmemory")
     
     try:
         # Configure backend
+        from backend.db import (
+            get_db, get_postgres_pool, get_memcached_client,
+            get_neo4j_driver, get_cassandra_session
+        )
+        from backend.repositories import (
+            PostgresSelectionRepository,
+            PostgresUniqueRequestRepository,
+            MemcachedSelectionRepository,
+            MemcachedUniqueRequestRepository,
+            Neo4jSelectionRepository,
+            Neo4jUniqueRequestRepository,
+            CassandraSelectionRepository,
+            CassandraUniqueRequestRepository,
+        )
+        
+        os.environ["BACKEND_TYPE"] = backend
+        
         if backend == "inmemory":
-            os.environ["USE_IN_MEMORY"] = "1"
             repo = InMemorySelectionRepository.get_instance()
             unique_repo = InMemoryUniqueRequestRepository.get_instance()
         elif backend == "mongodb":
-            os.environ["USE_IN_MEMORY"] = "0"
             db = get_db()
             repo = MongoSelectionRepository(db)
             unique_repo = MongoUniqueRequestRepository(db)
-        elif backend == "sqlite":
-            # SQLite uses in-memory for now (can be extended later)
-            os.environ["USE_IN_MEMORY"] = "1"
-            repo = InMemorySelectionRepository.get_instance()
-            unique_repo = InMemoryUniqueRequestRepository.get_instance()
+        elif backend == "postgres" or backend == "postgresql":
+            pool = await get_postgres_pool()
+            repo = PostgresSelectionRepository(pool)
+            unique_repo = PostgresUniqueRequestRepository(pool)
+        elif backend == "memcached":
+            client = await get_memcached_client()
+            repo = MemcachedSelectionRepository(client)
+            unique_repo = MemcachedUniqueRequestRepository(client)
+        elif backend == "neo4j":
+            driver = await get_neo4j_driver()
+            repo = Neo4jSelectionRepository(driver)
+            unique_repo = Neo4jUniqueRequestRepository(driver)
+        elif backend == "cassandra":
+            try:
+                from backend.repositories import CASSANDRA_AVAILABLE
+                if not CASSANDRA_AVAILABLE:
+                    return {
+                        "error": "Cassandra driver not available",
+                        "backend": backend,
+                        "hint": "Use Docker (deployment/Dockerfile.cassandra) which has pre-built drivers, or install Visual Studio Build Tools on Windows / build-essential on Linux. See README.md for Docker setup.",
+                        "details": "Docker: docker-compose up -d cassandra && docker build -f deployment/Dockerfile.cassandra -t alg-teach-cassandra . | Build tools: https://docs.datastax.com/en/developer/python-driver/latest/installation/"
+                    }
+                session, executor = get_cassandra_session()
+                repo = CassandraSelectionRepository(session, executor)
+                unique_repo = CassandraUniqueRequestRepository(session, executor)
+            except ImportError as e:
+                return {
+                    "error": f"Cassandra driver not installed: {str(e)}",
+                    "backend": backend,
+                    "hint": "Install cassandra-driver: pip install cassandra-driver"
+                }
+            except Exception as e:
+                return {
+                    "error": f"Cassandra connection failed: {str(e)}",
+                    "backend": backend,
+                    "hint": "Ensure Cassandra is running and CASSANDRA_HOSTS is configured correctly."
+                }
         else:
             return {"error": f"Unknown backend: {backend}"}
         
@@ -93,7 +140,7 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
                 await unique_repo.add_unique_request(prompt, algorithm_type)
                 
                 # UPDATE operation (simulate by inserting with same algorithm but different prompt)
-                if i % 3 == 0 and i > 0:  # Every 3rd request after first
+                if i % 2 == 0 and i > 0:  # Every 2nd request after first
                     update_start = time.time()
                     # Simulate update by inserting another selection with same algorithm
                     await repo.add_selection(algorithm_name, f"{prompt} (updated)")
@@ -102,7 +149,7 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
                     results["update_count"] += 1
                 
                 # DELETE operation (simulate - for in-memory we track, for MongoDB we skip complex deletes)
-                if i % 5 == 0 and i > 0:  # Every 5th request after first
+                if i % 3 == 0 and i > 0:  # Every 3rd request after first
                     delete_start = time.time()
                     # For MongoDB, we simulate delete timing
                     # For in-memory, we could actually delete but it's complex without IDs
@@ -177,18 +224,19 @@ async def run_performance_test(backend: str, num_requests: int = 100) -> Dict:
         return {"error": str(e), "backend": backend}
     finally:
         # Restore original env
-        os.environ["USE_IN_MEMORY"] = original_use_in_memory
+        os.environ["BACKEND_TYPE"] = original_backend_type
 
 
 @router.post("/performance/test")
 async def test_performance(
     backend: str,
-    num_requests: int = 100,
+    num_requests: int = 500,
 ) -> JSONResponse:
     """Run performance test for a specific backend."""
-    if backend not in ["inmemory", "mongodb", "sqlite"]:
+    valid_backends = ["inmemory", "mongodb", "postgres", "postgresql", "memcached", "neo4j", "cassandra"]
+    if backend not in valid_backends:
         return JSONResponse(
-            {"error": f"Invalid backend: {backend}. Must be one of: inmemory, mongodb, sqlite"},
+            {"error": f"Invalid backend: {backend}. Must be one of: {', '.join(valid_backends)}"},
             status_code=400,
         )
     
@@ -198,10 +246,10 @@ async def test_performance(
 
 @router.post("/performance/test-all")
 async def test_all_backends(
-    num_requests: int = Body(100, embed=True),
+    num_requests: int = Body(500, embed=True),
 ) -> JSONResponse:
     """Run performance tests for all backends and return comparison."""
-    backends = ["inmemory", "mongodb", "sqlite"]
+    backends = ["inmemory", "mongodb", "postgres", "memcached", "neo4j", "cassandra"]
     results = {}
     
     for backend in backends:
@@ -257,7 +305,7 @@ async def performance_report() -> HTMLResponse:
           html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); }
           body { font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; padding: 32px; }
           .wrap {
-            max-width: 1200px;
+            max-width: 1800px;
             margin: 0 auto;
             background: var(--panel);
             border-radius: 20px;
@@ -358,16 +406,22 @@ async def performance_report() -> HTMLResponse:
             border-radius: 12px;
             padding: 20px;
           }
+          .table-wrapper {
+            overflow-x: auto;
+            margin-top: 24px;
+            -webkit-overflow-scrolling: touch;
+          }
           .results-table {
             width: 100%;
+            min-width: 1400px;
             border-collapse: collapse;
-            margin-top: 24px;
           }
           .results-table th,
           .results-table td {
-            padding: 12px 16px;
+            padding: 10px 14px;
             text-align: left;
             border-bottom: 1px solid rgba(255,255,255,0.1);
+            white-space: nowrap;
           }
           .results-table th {
             color: var(--muted);
@@ -391,14 +445,18 @@ async def performance_report() -> HTMLResponse:
           <div class="nav">
             <a href="/">🏠 Home</a>
             <a href="/api">📋 API</a>
-            <a href="/api/reports">📊 Reports</a>
+            <a href="/docs">📚 Docs</a>
+            <a href="/reports">📊 All Reports</a>
+            <a href="/reports/usage.html">📈 Grouped Report</a>
+            <a href="/reports/usage/raw.html">📋 Raw Report</a>
+            <a href="/reports/details.html">📑 Details</a>
           </div>
           <h1>Performance Report</h1>
           <div class="subtitle">Compare performance across different backends</div>
           
           <div class="controls">
             <label for="numRequests">Requests:</label>
-            <input type="number" id="numRequests" value="100" min="10" max="10000" step="10">
+            <input type="number" id="numRequests" value="500" min="10" max="10000" step="10">
             <button onclick="runTests()" id="runBtn">🚀 Run Performance Tests</button>
           </div>
           
@@ -416,21 +474,36 @@ async def performance_report() -> HTMLResponse:
             </div>
           </div>
           
-          <table id="resultsTable" class="results-table" style="display: none;">
-            <thead>
-              <tr>
-                <th>Backend</th>
-                <th>Requests/sec</th>
-                <th>Avg Response (ms)</th>
-                <th>Min Response (ms)</th>
-                <th>Max Response (ms)</th>
-                <th>Total Time (s)</th>
-                <th>Success Rate</th>
-              </tr>
-            </thead>
-            <tbody id="resultsBody">
-            </tbody>
-          </table>
+          <div class="table-wrapper">
+            <table id="resultsTable" class="results-table" style="display: none;">
+              <thead>
+                <tr>
+                  <th>Backend</th>
+                  <th colspan="3">Inserts</th>
+                  <th colspan="3">Updates</th>
+                  <th colspan="3">Deletes</th>
+                  <th>Total Ops</th>
+                  <th>Success Rate</th>
+                </tr>
+                <tr>
+                  <th></th>
+                  <th>Count</th>
+                  <th>Ops/sec</th>
+                  <th>Avg (ms)</th>
+                  <th>Count</th>
+                  <th>Ops/sec</th>
+                  <th>Avg (ms)</th>
+                  <th>Count</th>
+                  <th>Ops/sec</th>
+                  <th>Avg (ms)</th>
+                  <th></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody">
+              </tbody>
+            </table>
+          </div>
         </div>
         
         <script>
@@ -473,11 +546,14 @@ async def performance_report() -> HTMLResponse:
             const resultsBody = document.getElementById('resultsBody');
             const btn = document.getElementById('runBtn');
             
-            const backends = ['inmemory', 'mongodb', 'sqlite'];
+            const backends = ['inmemory', 'mongodb', 'postgres', 'memcached', 'neo4j', 'cassandra'];
             const backendLabels = {
               'inmemory': 'In-Memory',
               'mongodb': 'MongoDB',
-              'sqlite': 'SQLite'
+              'postgres': 'PostgreSQL',
+              'memcached': 'Memcached',
+              'neo4j': 'Neo4j',
+              'cassandra': 'Cassandra'
             };
             
             // Prepare data
@@ -501,19 +577,26 @@ async def performance_report() -> HTMLResponse:
                 operationCountsData.inserts.push(0);
                 operationCountsData.updates.push(0);
                 operationCountsData.deletes.push(0);
+                
+                // Show error message (truncated if too long)
+                const errorMsg = result.error || 'Unknown error';
+                const hintMsg = result.hint || '';
+                const shortError = errorMsg.length > 30 ? errorMsg.substring(0, 30) + '...' : errorMsg;
+                const displayError = hintMsg ? `${shortError} (${hintMsg})` : shortError;
+                
                 tableRows.push({
                   backend: backendLabels[backend],
-                  insert_count: 'Error',
-                  insert_ops_per_sec: 'Error',
-                  insert_avg_ms: 'Error',
-                  update_count: 'Error',
-                  update_ops_per_sec: 'Error',
-                  update_avg_ms: 'Error',
-                  delete_count: 'Error',
-                  delete_ops_per_sec: 'Error',
-                  delete_avg_ms: 'Error',
-                  total_ops: 'Error',
-                  success: 'Error'
+                  insert_count: '-',
+                  insert_ops_per_sec: '-',
+                  insert_avg_ms: '-',
+                  update_count: '-',
+                  update_ops_per_sec: '-',
+                  update_avg_ms: '-',
+                  delete_count: '-',
+                  delete_ops_per_sec: '-',
+                  delete_avg_ms: '-',
+                  total_ops: '-',
+                  success: displayError
                 });
                 continue;
               }
@@ -793,8 +876,8 @@ async def performance_index() -> JSONResponse:
                 "method": "POST",
                 "description": "Test performance of a specific backend",
                 "params": {
-                    "backend": "inmemory, mongodb, or sqlite",
-                    "num_requests": "Number of requests to test (default: 100)",
+                    "backend": "inmemory, mongodb, postgres, memcached, neo4j, or cassandra",
+                    "num_requests": "Number of requests to test (default: 500)",
                 },
             },
             "test_all": {
@@ -802,7 +885,7 @@ async def performance_index() -> JSONResponse:
                 "method": "POST",
                 "description": "Test all backends and return comparison",
                 "params": {
-                    "num_requests": "Number of requests per backend (default: 100)",
+                    "num_requests": "Number of requests per backend (default: 500)",
                 },
             },
             "report": {
@@ -813,7 +896,7 @@ async def performance_index() -> JSONResponse:
         },
         "links": {
             "api_index": "/api",
-            "reports": "/api/reports",
+                "reports": "/reports",
         },
     })
 

@@ -94,7 +94,7 @@ def is_image_in_use(image_id: str, image_name: str = "") -> bool:
         image_id: Docker image ID
         image_name: Optional image name (repository:tag) for more accurate checking
     """
-    # Check by image ID first (ancestor filter)
+    # Check by image ID (ancestor filter) - this finds containers using this image or any tag of it
     result = subprocess.run(
         ["docker", "ps", "-a", "--filter", f"ancestor={image_id}", "--format", "{{.ID}}"],
         capture_output=True,
@@ -104,16 +104,32 @@ def is_image_in_use(image_id: str, image_name: str = "") -> bool:
     if result.returncode == 0 and result.stdout.strip():
         return True
     
-    # If we have image name, check by name as well
-    if image_name and image_name != "<none>:<none>":
-        result = subprocess.run(
-            ["docker", "ps", "-a", "--filter", f"image={image_name}", "--format", "{{.ID}}"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            return True
+    # Also check running containers by inspecting their image field
+    # This catches cases where containers reference images by tag
+    result = subprocess.run(
+        ["docker", "ps", "-a", "--format", "{{.Image}}"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+    )
+    if result.returncode == 0:
+        for line in result.stdout.strip().split("\n"):
+            if line.strip():
+                # Check if this container's image matches our image name or ID
+                if image_name and image_name in line:
+                    # Get the actual image ID of this container to compare
+                    container_image = line.strip()
+                    inspect_result = subprocess.run(
+                        ["docker", "inspect", "-f", "{{.Id}}", container_image],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    if inspect_result.returncode == 0:
+                        container_image_id = inspect_result.stdout.strip()
+                        # Compare short IDs (first 12 chars)
+                        if image_id.startswith(container_image_id[:12]) or container_image_id.startswith(image_id[:12]):
+                            return True
     
     return False
 
@@ -191,7 +207,8 @@ def cleanup_old_images(age_minutes: int = 15, dry_run: bool = False) -> int:
                 removed_count += 1
             else:
                 print(f"  Removing {img['repository']}:{img['tag']} (unused, age: {age_str})")
-                # Remove by image name (repository:tag) instead of ID to handle shared image IDs
+                # Remove by image name (repository:tag) first
+                # Use short ID format for better compatibility
                 image_ref = img["image_name"] if img.get("tag") != "<none>" else img["id"]
                 result = subprocess.run(
                     ["docker", "rmi", "-f", image_ref],
@@ -201,21 +218,38 @@ def cleanup_old_images(age_minutes: int = 15, dry_run: bool = False) -> int:
                 )
                 if result.returncode == 0:
                     removed_count += 1
+                    # Check if image still exists (might be shared with other tags)
+                    check_result = subprocess.run(
+                        ["docker", "images", "--format", "{{.ID}}", image_ref],
+                        capture_output=True,
+                        text=True,
+                        timeout=10,
+                    )
+                    # If removal succeeded but image still exists, it's likely shared
+                    # We'll let subsequent iterations handle other tags
                 else:
-                    # If removal by name fails, try by ID as fallback
-                    if image_ref != img["id"]:
-                        result2 = subprocess.run(
+                    # If removal by name fails, try by short ID
+                    short_id = img["id"][:12]
+                    result2 = subprocess.run(
+                        ["docker", "rmi", "-f", short_id],
+                        capture_output=True,
+                        text=True,
+                        timeout=30,
+                    )
+                    if result2.returncode == 0:
+                        removed_count += 1
+                    else:
+                        # Last resort: try full ID
+                        result3 = subprocess.run(
                             ["docker", "rmi", "-f", img["id"]],
                             capture_output=True,
                             text=True,
                             timeout=30,
                         )
-                        if result2.returncode == 0:
+                        if result3.returncode == 0:
                             removed_count += 1
                         else:
-                            print(f"    Warning: Failed to remove {img['repository']}:{img['tag']} - {result2.stderr}")
-                    else:
-                        print(f"    Warning: Failed to remove {img['repository']}:{img['tag']} - {result.stderr}")
+                            print(f"    Warning: Failed to remove {img['repository']}:{img['tag']} - {result.stderr.strip() or result2.stderr.strip() or result3.stderr.strip()}")
         else:
             age_delta = now - created
             age_str = str(age_delta).split(".")[0]

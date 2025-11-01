@@ -66,7 +66,7 @@ def test_end_to_end_multiple_prompts_and_usage_report(app_and_repo):
         body = r.json()
         assert body.get("recommendations")
 
-    rep = client.get("/api/reports/usage")
+    rep = client.get("/reports/usage")
     assert rep.status_code == 200
     data = rep.json()
     assert data["total"] == len(prompts)

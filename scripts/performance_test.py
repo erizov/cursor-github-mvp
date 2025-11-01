@@ -89,7 +89,7 @@ def test_backend(base_url: str, backend: str, num_requests: int = 100) -> Dict:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Performance test for backends")
     parser.add_argument("--backend", type=str, required=True, choices=["inmemory", "mongodb", "sqlite"], help="Backend to test")
-    parser.add_argument("--requests", type=int, default=100, help="Number of requests to send")
+    parser.add_argument("--requests", type=int, default=500, help="Number of requests to send")
     parser.add_argument("--base-url", type=str, default="http://localhost:8000", help="Base URL of API")
     parser.add_argument("--output", type=str, help="Output JSON file path")
     args = parser.parse_args()
