@@ -16,16 +16,17 @@ router = APIRouter(tags=["index"])
 
 
 def _html_page(title: str, body: str) -> str:
-    return (
-        """
+    font_links = get_font_links()
+    common_styles = get_common_styles()
+    return f"""
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{title}</title>
-    {get_font_links()}
-    {get_common_styles()}
+    {font_links}
+    {common_styles}
     <script>
       async function executePost(endpoint, resultId) {{
         const resultDiv = document.getElementById(resultId);
@@ -45,9 +46,9 @@ def _html_page(title: str, body: str) -> str:
           }});
           
           const data = await response.json();
-          resultDiv.innerHTML = '<strong>Response (' + response.status + '):</strong><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+          resultDiv.innerHTML = '<strong>Response (' + response.status + '):</strong><pre style="white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-width: 100%;">' + JSON.stringify(data, null, 2) + '</pre>';
         }} catch (error) {{
-          resultDiv.innerHTML = '<strong style="color: var(--danger);">Error:</strong><pre>' + error.message + '</pre>';
+          resultDiv.innerHTML = '<strong style="color: var(--danger);">Error:</strong><pre style="white-space: pre-wrap; word-wrap: break-word; word-break: break-word; overflow-wrap: break-word; max-width: 100%;">' + error.message + '</pre>';
         }}
       }}
     </script>
@@ -57,8 +58,6 @@ def _html_page(title: str, body: str) -> str:
   </body>
 </html>
 """
-        .format(title=title, body=body)
-    )
 
 
 def _link(href: str, text: Optional[str] = None, badge: Optional[str] = None) -> str:
@@ -88,7 +87,7 @@ async def root_index(request: Request) -> HTMLResponse:
     nav = "\n".join(
         [
             _link("/reports", "📊 All Reports"),
-            _link("/api/performance/report", "⚡ Performance Report"),
+            _link("/reports/performance.html", "⚡ Performance Report"),
             _link("/tests/unit.html", "🧪 Unit Tests"),
             _link("/tests/e2e.html", "🔬 E2E Tests"),
             _link("/tests/pipeline.html", "🚀 Pipeline"),
@@ -236,7 +235,7 @@ async def api_index(request: Request) -> HTMLResponse:
             "endpoints": [
                 {
                     "method": "GET",
-                    "path": "/api/performance/report",
+                    "path": "/reports/performance.html",
                     "description": "Performance report with graphs comparing all backends (HTML)"
                 },
                 {
@@ -325,7 +324,7 @@ async def api_index(request: Request) -> HTMLResponse:
             <li><a href="/reports">📊 All Reports</a></li>
             <li><a href="/reports/usage.html">📈 Usage Report (Grouped)</a></li>
             <li><a href="/reports/usage/raw.html">📋 Raw Usage Report</a></li>
-            <li><a href="/reports/performance">⚡ Performance Report</a></li>
+            <li><a href="/reports/performance.html">⚡ Performance Report</a></li>
             <li><a href="/docs">📚 Swagger UI</a></li>
             <li><a href="/metrics.html">📊 Metrics</a></li>
           </ul>
@@ -557,7 +556,7 @@ async def index_html() -> HTMLResponse:
             <span class="small">View all reports and monitoring pages</span>
           </li>
           <li>
-            <a href="/api/performance/report">⚡ Performance Report</a>
+            <a href="/reports/performance.html">⚡ Performance Report</a>
             <span class="small">Compare performance across backends with graphs</span>
           </li>
           <li>
@@ -658,7 +657,7 @@ async def unit_tests_page() -> HTMLResponse:
         <p class="small" style="margin: 0 0 32px;">Run unit tests (excludes Docker and e2e tests)</p>
         
         <button onclick="executePost('/tests/unit', 'result_unit')">Run Unit Tests</button>
-        <div id="result_unit" style="margin-top: 16px;"></div>
+        <div id="result_unit"></div>
         
         <h2>Test Information</h2>
         <ul>
@@ -693,7 +692,7 @@ async def e2e_tests_page() -> HTMLResponse:
         <p class="small" style="margin: 0 0 32px;">Run end-to-end tests</p>
         
         <button onclick="executePost('/tests/run?scope=tests/test_e2e.py', 'result_e2e')">Run E2E Tests</button>
-        <div id="result_e2e" style="margin-top: 16px;"></div>
+        <div id="result_e2e"></div>
         
         <h2>Test Information</h2>
         <ul>
@@ -725,7 +724,7 @@ async def pipeline_tests_page() -> HTMLResponse:
         <p class="small" style="margin: 0 0 32px;">Run end-to-end pipeline test (builds Docker, runs container, verifies endpoints)</p>
         
         <button onclick="executePost('/tests/pipeline', 'result_pipeline')">Run Pipeline Test</button>
-        <div id="result_pipeline" style="margin-top: 16px;"></div>
+        <div id="result_pipeline"></div>
         
         <h2>Test Information</h2>
         <ul>

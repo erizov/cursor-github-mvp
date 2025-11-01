@@ -443,6 +443,29 @@ def get_common_styles() -> str:
         text-align: center;
         padding: 32px;
       }
+      div[id^="result_"],
+      div[id^="endpoint_"] {
+        margin-top: 0.5rem;
+        margin-left: 1.5rem;
+        padding: 12px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 8px;
+        display: none;
+        border: 1px solid rgba(255,255,255,0.1);
+        word-wrap: break-word;
+        word-break: break-word;
+        white-space: pre-wrap;
+        overflow-wrap: break-word;
+        max-width: 100%;
+      }
+      div[id^="result_"] pre,
+      div[id^="endpoint_"] pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        max-width: 100%;
+      }
     </style>
     """
 

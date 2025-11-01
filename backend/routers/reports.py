@@ -209,7 +209,7 @@ async def usage_raw_html(repo: MongoSelectionRepository = Depends(get_repo)) -> 
             <a href="/reports/usage.html">📈 Grouped Report</a>
             <a href="/reports/usage/raw">📄 JSON</a>
             <a href="/reports/details.html">📑 Details</a>
-            <a href="/reports/performance">⚡ Performance</a>
+            <a href="/reports/performance.html">⚡ Performance</a>
           </div>
           <h1>Raw Usage Report<span class="info-badge">Raw Algorithm Names</span></h1>
           <div class="sub">Algorithm usage showing actual algorithm names without grouping by type</div>
@@ -438,7 +438,7 @@ async def usage_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HTML
             <a href="/reports/usage.html">📈 Grouped Report</a>
             <a href="/reports/usage/raw.html">📋 Raw Report</a>
             <a href="/reports/details.html">📑 Details</a>
-            <a href="/reports/performance">⚡ Performance</a>
+            <a href="/reports/performance.html">⚡ Performance</a>
             <select id="seedCount" class="control-select">
               <option value="10">10 prompts</option>
               <option value="50">50 prompts</option>
@@ -755,7 +755,7 @@ async def reports_index(request: Request) -> HTMLResponse:
                 <div class="quick-link-desc">Actual algorithm names without grouping</div>
               </li>
               <li class="good">
-                <a href="/reports/performance">⚡ Performance Report</a>
+                <a href="/reports/performance.html">⚡ Performance Report</a>
                 <div class="quick-link-desc">Compare backend performance</div>
               </li>
               <li class="info">
@@ -770,7 +770,7 @@ async def reports_index(request: Request) -> HTMLResponse:
             <div class="endpoint">
               <div class="endpoint-header">
                 <span class="method get">GET</span>
-                <a href="/reports/performance">/reports/performance</a>
+                <a href="/reports/performance.html">/reports/performance.html</a>
               </div>
               <p>Interactive performance report comparing all backends (inmemory, mongodb, postgres, memcached, neo4j, cassandra) with charts for inserts, updates, deletes operations</p>
             </div>
@@ -855,7 +855,7 @@ async def reports_index(request: Request) -> HTMLResponse:
               <li><a href="/docs">Swagger UI</a></li>
               <li><a href="/redoc">ReDoc</a></li>
               <li><a href="/index.json">All Endpoints (JSON)</a></li>
-              <li><a href="/reports/performance">Performance Report</a></li>
+              <li><a href="/reports/performance.html">Performance Report</a></li>
               <li><a href="/reports/usage.html">Usage Report (Grouped)</a></li>
               <li><a href="/reports/usage/raw.html">Raw Usage Report</a></li>
             </ul>
@@ -868,10 +868,12 @@ async def reports_index(request: Request) -> HTMLResponse:
 
 
 @router.get("/reports/performance", response_class=HTMLResponse)
-async def performance_report() -> HTMLResponse:
-    """Performance report page - redirects to the actual endpoint."""
-    from backend.routers.performance import performance_report as perf_report
-    return await perf_report()
+@router.get("/reports/performance.html", response_class=HTMLResponse)
+async def performance_report_route() -> HTMLResponse:
+    """Performance report page."""
+    from backend.routers.performance import _get_performance_report_html
+    from fastapi.responses import HTMLResponse as HTMLResp
+    return HTMLResp(content=_get_performance_report_html())
 
 
 @router.get("/reports/index.json")
@@ -896,7 +898,7 @@ async def reports_index_json() -> JSONResponse:
                     "description": "Detailed report with prompts and timestamps grouped by algorithm",
                 },
                 "performance": {
-                    "html": "/reports/performance",
+                    "html": "/reports/performance.html",
                     "description": "Performance report comparing all backends with charts",
                 },
             },
@@ -957,7 +959,7 @@ async def details_html(repo: MongoSelectionRepository = Depends(get_repo)) -> HT
             <a href=\"/reports\">📊 All Reports</a>
             <a href=\"/reports/usage.html\">📈 Grouped Report</a>
             <a href=\"/reports/usage/raw.html\">📋 Raw Report</a>
-            <a href=\"/reports/performance\">⚡ Performance</a>
+            <a href=\"/reports/performance.html\">⚡ Performance</a>
           </div>
           <h1>Detailed Report</h1>
           <div class=\"sub\">Grouped by algorithm (desc). Total: {total}</div>

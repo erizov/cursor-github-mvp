@@ -264,11 +264,17 @@ async def test_all_backends(
 
 
 @router.get("/performance/report")
-async def performance_report() -> HTMLResponse:
-    """HTML performance report page with graphs."""
+async def performance_report_old() -> HTMLResponse:
+    """Legacy endpoint - redirects to /reports/performance."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/reports/performance.html", status_code=301)
+
+
+def _get_performance_report_html() -> str:
+    """Generate the HTML content for the performance report page."""
     font_links = get_font_links()
     common_styles = get_common_styles()
-    html = f"""
+    return f"""
     <!doctype html>
     <html lang="en">
       <head>
@@ -279,63 +285,75 @@ async def performance_report() -> HTMLResponse:
         <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
         {common_styles}
         <style>
-          body { padding: 32px; }
-          .wrap { max-width: 1800px; }
-          h1 { font-size: 2.5rem; }
-          .nav { margin-bottom: 32px; }
-          .status {
+          body {{ padding: 32px; }}
+          .wrap {{ max-width: 1800px; }}
+          h1 {{ font-size: 2.5rem; }}
+          .nav {{ margin-bottom: 32px; }}
+          .status {{
             padding: 12px;
             margin-bottom: 16px;
             border-radius: 8px;
             background: rgba(122, 162, 247, 0.1);
             border: 1px solid rgba(122, 162, 247, 0.3);
             display: none;
-          }
-          .charts-grid {
+            word-wrap: break-word;
+            word-break: break-word;
+          }}
+          .charts-grid {{
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
             gap: 24px;
             margin-bottom: 32px;
-          }
-          .chart-container {
+          }}
+          .chart-container {{
             position: relative;
             height: 300px;
             background: rgba(255,255,255,0.02);
             border-radius: 12px;
             padding: 20px;
-          }
-          .table-wrapper {
+          }}
+          .table-wrapper {{
             overflow-x: auto;
             margin-top: 24px;
             -webkit-overflow-scrolling: touch;
-          }
-          .results-table {
+          }}
+          .results-table {{
             width: 100%;
             min-width: 1400px;
             border-collapse: collapse;
-          }
+          }}
           .results-table th,
-          .results-table td {
+          .results-table td {{
             padding: 10px 14px;
             text-align: left;
             border-bottom: 1px solid rgba(255,255,255,0.1);
-            white-space: nowrap;
-          }
-          .results-table th {
+            word-wrap: break-word;
+            word-break: break-word;
+            max-width: 200px;
+          }}
+          .results-table th {{
             color: var(--muted);
             font-size: 0.875rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.05em;
-          }
-          .results-table td {
+            white-space: nowrap;
+          }}
+          .results-table td {{
             font-family: 'JetBrains Mono', monospace;
             color: var(--text);
-          }
-          .backend-name {
+          }}
+          .results-table td.success-rate {{
+            white-space: normal;
+            max-width: 300px;
+            word-wrap: break-word;
+            word-break: break-word;
+          }}
+          .backend-name {{
             font-weight: 600;
             color: var(--accent);
-          }
+            white-space: nowrap;
+          }}
         </style>
       </head>
       <body>
@@ -360,7 +378,7 @@ async def performance_report() -> HTMLResponse:
           
           <div id="status" class="status"></div>
           
-          <div id="charts" class="charts-grid" style="display: none;">
+          <div id="charts" class="charts-grid" style="display:none;">
             <div class="chart-container">
               <canvas id="opsPerSecondChart"></canvas>
             </div>
@@ -373,7 +391,7 @@ async def performance_report() -> HTMLResponse:
           </div>
           
           <div class="table-wrapper">
-            <table id="resultsTable" class="results-table" style="display: none;">
+            <table id="resultsTable" class="results-table" style="display:none;">
               <thead>
                 <tr>
                   <th>Backend</th>
@@ -405,9 +423,9 @@ async def performance_report() -> HTMLResponse:
         </div>
         
         <script>
-          let charts = {};
+          let charts = {{}};
           
-          async function runTests() {
+          async function runTests() {{
             const btn = document.getElementById('runBtn');
             const statusDiv = document.getElementById('status');
             const numRequests = parseInt(document.getElementById('numRequests').value, 10);
@@ -417,27 +435,27 @@ async def performance_report() -> HTMLResponse:
             statusDiv.style.display = 'block';
             statusDiv.innerHTML = '<em style="color: var(--muted);">Running performance tests for all backends...</em>';
             
-            try {
-              const response = await fetch('/api/performance/test-all', {
+            try {{
+              const response = await fetch('/api/performance/test-all', {{
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ num_requests: numRequests })
-              });
+                headers: {{ 'Content-Type': 'application/json' }},
+                body: JSON.stringify({{ num_requests: numRequests }})
+              }});
               
-              if (!response.ok) {
+              if (!response.ok) {{
                 throw new Error('Failed to run tests');
-              }
+              }}
               
               const data = await response.json();
               displayResults(data);
-            } catch (error) {
+            }} catch (error) {{
               statusDiv.innerHTML = '<strong style="color: var(--danger);">✗ Error: ' + error.message + '</strong>';
               btn.disabled = false;
               btn.textContent = '🚀 Run Performance Tests';
-            }
-          }
+            }}
+          }}
           
-          function displayResults(data) {
+          function displayResults(data) {{
             const statusDiv = document.getElementById('status');
             const chartsDiv = document.getElementById('charts');
             const resultsTable = document.getElementById('resultsTable');
@@ -445,27 +463,27 @@ async def performance_report() -> HTMLResponse:
             const btn = document.getElementById('runBtn');
             
             const backends = ['inmemory', 'mongodb', 'postgres', 'memcached', 'neo4j', 'cassandra'];
-            const backendLabels = {
+            const backendLabels = {{
               'inmemory': 'In-Memory',
               'mongodb': 'MongoDB',
               'postgres': 'PostgreSQL',
               'memcached': 'Memcached',
               'neo4j': 'Neo4j',
               'cassandra': 'Cassandra'
-            };
+            }};
             
             // Prepare data
-            const opsPerSecondData = { inserts: [], updates: [], deletes: [] };
-            const avgTimeData = { inserts: [], updates: [], deletes: [] };
-            const operationCountsData = { inserts: [], updates: [], deletes: [] };
+            const opsPerSecondData = {{ inserts: [], updates: [], deletes: [] }};
+            const avgTimeData = {{ inserts: [], updates: [], deletes: [] }};
+            const operationCountsData = {{ inserts: [], updates: [], deletes: [] }};
             const tableRows = [];
             const backendNames = [];
             
-            for (const backend of backends) {
+            for (const backend of backends) {{
               const result = data.backends[backend];
               backendNames.push(backendLabels[backend]);
               
-              if (result.error) {
+              if (result.error) {{
                 opsPerSecondData.inserts.push(0);
                 opsPerSecondData.updates.push(0);
                 opsPerSecondData.deletes.push(0);
@@ -480,9 +498,9 @@ async def performance_report() -> HTMLResponse:
                 const errorMsg = result.error || 'Unknown error';
                 const hintMsg = result.hint || '';
                 const shortError = errorMsg.length > 30 ? errorMsg.substring(0, 30) + '...' : errorMsg;
-                const displayError = hintMsg ? `${shortError} (${hintMsg})` : shortError;
+                const displayError = hintMsg ? `${{shortError}} (${{hintMsg}})` : shortError;
                 
-                tableRows.push({
+                tableRows.push({{
                   backend: backendLabels[backend],
                   insert_count: '-',
                   insert_ops_per_sec: '-',
@@ -495,9 +513,9 @@ async def performance_report() -> HTMLResponse:
                   delete_avg_ms: '-',
                   total_ops: '-',
                   success: displayError
-                });
+                }});
                 continue;
-              }
+              }}
               
               // Extract metrics
               const insertCount = result.insert_count || 0;
@@ -529,7 +547,7 @@ async def performance_report() -> HTMLResponse:
               operationCountsData.updates.push(updateCount);
               operationCountsData.deletes.push(deleteCount);
               
-              tableRows.push({
+              tableRows.push({{
                 backend: backendLabels[backend],
                 insert_count: insertCount,
                 insert_ops_per_sec: insertOpsPerSec.toFixed(2),
@@ -542,8 +560,8 @@ async def performance_report() -> HTMLResponse:
                 delete_avg_ms: deleteAvgMs.toFixed(2),
                 total_ops: totalOps,
                 success: successRate
-              });
-            }
+              }});
+            }}
             
             // Update status
             statusDiv.innerHTML = '<strong style="color: var(--good);">✓ Tests completed successfully!</strong>';
@@ -558,31 +576,31 @@ async def performance_report() -> HTMLResponse:
             // Render table
             resultsBody.innerHTML = tableRows.map(row => `
               <tr>
-                <td class="backend-name">${row.backend}</td>
-                <td>${row.insert_count}</td>
-                <td>${row.insert_ops_per_sec}</td>
-                <td>${row.insert_avg_ms}</td>
-                <td>${row.update_count}</td>
-                <td>${row.update_ops_per_sec}</td>
-                <td>${row.update_avg_ms}</td>
-                <td>${row.delete_count}</td>
-                <td>${row.delete_ops_per_sec}</td>
-                <td>${row.delete_avg_ms}</td>
-                <td>${row.total_ops}</td>
-                <td>${row.success}</td>
+                <td class="backend-name">${{row.backend}}</td>
+                <td>${{row.insert_count}}</td>
+                <td>${{row.insert_ops_per_sec}}</td>
+                <td>${{row.insert_avg_ms}}</td>
+                <td>${{row.update_count}}</td>
+                <td>${{row.update_ops_per_sec}}</td>
+                <td>${{row.update_avg_ms}}</td>
+                <td>${{row.delete_count}}</td>
+                <td>${{row.delete_ops_per_sec}}</td>
+                <td>${{row.delete_avg_ms}}</td>
+                <td>${{row.total_ops}}</td>
+                <td class="success-rate">${{row.success}}</td>
               </tr>
             `).join('');
             
             btn.disabled = false;
             btn.textContent = '🚀 Run Performance Tests';
-          }
+          }}
           
-          function renderCharts(backendNames, opsPerSecondData, avgTimeData, operationCountsData) {
-            const colors = {
+          function renderCharts(backendNames, opsPerSecondData, avgTimeData, operationCountsData) {{
+            const colors = {{
               insert: 'rgba(34, 197, 94, 0.8)',    // Green
               update: 'rgba(251, 191, 36, 0.8)',   // Yellow
               delete: 'rgba(239, 68, 68, 0.8)'     // Red
-            };
+            }};
             
             // Destroy existing charts
             if (charts.opsPerSecond) charts.opsPerSecond.destroy();
@@ -590,178 +608,177 @@ async def performance_report() -> HTMLResponse:
             if (charts.operationCounts) charts.operationCounts.destroy();
             
             // Operations per second chart
-            charts.opsPerSecond = new Chart(document.getElementById('opsPerSecondChart'), {
+            charts.opsPerSecond = new Chart(document.getElementById('opsPerSecondChart'), {{
               type: 'bar',
-              data: {
+              data: {{
                 labels: backendNames,
                 datasets: [
-                  {
+                  {{
                     label: 'Inserts/sec',
                     data: opsPerSecondData.inserts,
                     backgroundColor: colors.insert,
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Updates/sec',
                     data: opsPerSecondData.updates,
                     backgroundColor: colors.update,
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Deletes/sec',
                     data: opsPerSecondData.deletes,
                     backgroundColor: colors.delete,
                     borderRadius: 8,
-                  }
+                  }}
                 ]
-              },
-              options: {
+              }},
+              options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
-                  tooltip: {
+                plugins: {{
+                  legend: {{ display: true, labels: {{ color: '#e6e9f2', font: {{ size: 12 }}}}}},
+                  tooltip: {{
                     backgroundColor: 'rgba(19, 26, 51, 0.95)',
                     titleColor: '#e6e9f2',
                     bodyColor: '#e6e9f2',
-                  },
-                  title: {
+                  }},
+                  title: {{
                     display: true,
                     text: 'Operations per Second',
                     color: '#e6e9f2',
-                    font: { size: 16, weight: 'bold' }
-                  }
-                },
-                scales: {
-                  y: {
-                    ticks: { color: '#9aa3b2', font: { family: 'JetBrains Mono', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  },
-                  x: {
-                    ticks: { color: '#9aa3b2', font: { family: 'Inter', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  }
-                }
-              }
-            });
+                    font: {{ size: 16, weight: 'bold' }}
+                  }}
+                }},
+                scales: {{
+                  y: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'JetBrains Mono', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }},
+                  x: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'Inter', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }}
+                }}
+              }}
+            }});
             
             // Average time chart
-            charts.avgTime = new Chart(document.getElementById('avgTimeChart'), {
+            charts.avgTime = new Chart(document.getElementById('avgTimeChart'), {{
               type: 'bar',
-              data: {
+              data: {{
                 labels: backendNames,
                 datasets: [
-                  {
+                  {{
                     label: 'Avg Insert Time (ms)',
                     data: avgTimeData.inserts,
                     backgroundColor: colors.insert.replace('0.8', '0.6'),
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Avg Update Time (ms)',
                     data: avgTimeData.updates,
                     backgroundColor: colors.update.replace('0.8', '0.6'),
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Avg Delete Time (ms)',
                     data: avgTimeData.deletes,
                     backgroundColor: colors.delete.replace('0.8', '0.6'),
                     borderRadius: 8,
-                  }
+                  }}
                 ]
-              },
-              options: {
+              }},
+              options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
-                  tooltip: {
+                plugins: {{
+                  legend: {{ display: true, labels: {{ color: '#e6e9f2', font: {{ size: 12 }}}}}},
+                  tooltip: {{
                     backgroundColor: 'rgba(19, 26, 51, 0.95)',
                     titleColor: '#e6e9f2',
                     bodyColor: '#e6e9f2',
-                  },
-                  title: {
+                  }},
+                  title: {{
                     display: true,
                     text: 'Average Operation Time (ms)',
                     color: '#e6e9f2',
-                    font: { size: 16, weight: 'bold' }
-                  }
-                },
-                scales: {
-                  y: {
-                    ticks: { color: '#9aa3b2', font: { family: 'JetBrains Mono', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  },
-                  x: {
-                    ticks: { color: '#9aa3b2', font: { family: 'Inter', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  }
-                }
-              }
-            });
+                    font: {{ size: 16, weight: 'bold' }}
+                  }}
+                }},
+                scales: {{
+                  y: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'JetBrains Mono', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }},
+                  x: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'Inter', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }}
+                }}
+              }}
+            }});
             
             // Operation counts chart
-            charts.operationCounts = new Chart(document.getElementById('operationCountsChart'), {
+            charts.operationCounts = new Chart(document.getElementById('operationCountsChart'), {{
               type: 'bar',
-              data: {
+              data: {{
                 labels: backendNames,
                 datasets: [
-                  {
+                  {{
                     label: 'Insert Count',
                     data: operationCountsData.inserts,
                     backgroundColor: colors.insert.replace('0.8', '0.7'),
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Update Count',
                     data: operationCountsData.updates,
                     backgroundColor: colors.update.replace('0.8', '0.7'),
                     borderRadius: 8,
-                  },
-                  {
+                  }},
+                  {{
                     label: 'Delete Count',
                     data: operationCountsData.deletes,
                     backgroundColor: colors.delete.replace('0.8', '0.7'),
                     borderRadius: 8,
-                  }
+                  }}
                 ]
-              },
-              options: {
+              }},
+              options: {{
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                  legend: { display: true, labels: { color: '#e6e9f2', font: { size: 12 }}},
-                  tooltip: {
+                plugins: {{
+                  legend: {{ display: true, labels: {{ color: '#e6e9f2', font: {{ size: 12 }}}}}},
+                  tooltip: {{
                     backgroundColor: 'rgba(19, 26, 51, 0.95)',
                     titleColor: '#e6e9f2',
                     bodyColor: '#e6e9f2',
-                  },
-                  title: {
+                  }},
+                  title: {{
                     display: true,
                     text: 'Operation Counts',
                     color: '#e6e9f2',
-                    font: { size: 16, weight: 'bold' }
-                  }
-                },
-                scales: {
-                  y: {
-                    ticks: { color: '#9aa3b2', font: { family: 'JetBrains Mono', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  },
-                  x: {
-                    ticks: { color: '#9aa3b2', font: { family: 'Inter', size: 11 }},
-                    grid: { color: 'rgba(255,255,255,0.05)' }
-                  }
-                }
-              }
-            });
-          }
+                    font: {{ size: 16, weight: 'bold' }}
+                  }}
+                }},
+                scales: {{
+                  y: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'JetBrains Mono', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }},
+                  x: {{
+                    ticks: {{ color: '#9aa3b2', font: {{ family: 'Inter', size: 11 }}}},
+                    grid: {{ color: 'rgba(255,255,255,0.05)' }}
+                  }}
+                }}
+              }}
+            }});
+          }}
         </script>
       </body>
     </html>
     """
-    return HTMLResponse(content=html)
 
 
 @router.get("/performance")
@@ -787,7 +804,7 @@ async def performance_index() -> JSONResponse:
                 },
             },
             "report": {
-                "endpoint": "/api/performance/report",
+                "endpoint": "/reports/performance.html",
                 "method": "GET",
                 "description": "HTML performance report with graphs",
             },

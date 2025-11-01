@@ -60,7 +60,7 @@ def get_algorithm_type_from_algorithm(algorithm: str) -> str:
         return "AutoML"
     else:
         # Default to Classification instead of "Other"
-        return "Classification"
+        return "Other"
 
 
 def generate_classification_prompts() -> List[Tuple[str, str]]:
